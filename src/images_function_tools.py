@@ -406,3 +406,15 @@ class MyImage:
         if self.mode.upper() == 'L':
             G = (self.r.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[0] + self.g.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[1]\
             + self.b.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[2]) / sum(MyImage.DEFAUL_GRAY_SCALE_COEF)
+    
+    def show_images(images:list[Self]):
+        DEFAULT_IMAGES_PER_ROW = 3
+        number_of_rows = len(images)//DEFAULT_IMAGES_PER_ROW + 1 if len(images) % DEFAULT_IMAGES_PER_ROW != 0 else len(images)
+        
+        for i,img in enumerate(images):
+            axe = plt.subplot2grid((1,len(images)),(0,i)) 
+            pil_img = Image.new("RGB",img.dimensions)
+            pil_img.putdata(list(zip(img.r.flatten(),img.g.flatten(),img.b.flatten())))
+            axe.imshow(pil_img)
+
+        plt.show()
