@@ -381,7 +381,7 @@ class MyImage:
 
 
 if __name__ == "__main__":
-    path =  "rsrs/img2.jpg"
+    path =  "data/img2.jpg"
     img:MyImage = MyImage.open_image_as_rgb_matrices(path)
     """rclck = img.rotate(reverse=True)
     rclck = img.flip(axe='v')
