@@ -1,18 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from images_function_tools import MyImage
+from tkinter import filedialog
 
-# Generate some data
-x = np.linspace(0, 2 * np.pi, 100)
-y1 = np.sin(x)
-y2 = np.cos(x)
 
-# Create a 1x2 grid of subplots
-plt.subplot(1, 2, 1)  # 1 row, 2 columns, select the first subplot
-plt.plot(x, y1)
-plt.title('Sin Function')
+def main():
+    path =  filedialog.askopenfilename()
+    img:MyImage = MyImage.open_image_as_rgb_matrices(path)
+    MyImage.show_image(img.mean_filter_center(3))
 
-plt.subplot(1, 2, 2)  # 1 row, 2 columns, select the second subplot
-plt.plot(x, y2)
-plt.title('Cos Function')
-
-plt.show()
+if __name__ == "__main__":
+    main()

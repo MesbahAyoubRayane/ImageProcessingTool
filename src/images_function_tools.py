@@ -378,12 +378,3 @@ class MyImage:
         if self.mode.upper() == 'L':
             G = (self.r.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[0] + self.g.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[1]\
             + self.b.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[2]) / sum(MyImage.DEFAUL_GRAY_SCALE_COEF)
-
-
-def main():
-    path =  "data/img2.jpg"
-    img:MyImage = MyImage.open_image_as_rgb_matrices(path)
-    MyImage.show_image(img.mean_filter_center(3))
-
-if __name__ == "__main__":
-    main()
