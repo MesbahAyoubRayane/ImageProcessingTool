@@ -380,20 +380,10 @@ class MyImage:
             + self.b.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[2]) / sum(MyImage.DEFAUL_GRAY_SCALE_COEF)
 
 
-if __name__ == "__main__":
+def main():
     path =  "data/img2.jpg"
     img:MyImage = MyImage.open_image_as_rgb_matrices(path)
-    """rclck = img.rotate(reverse=True)
-    rclck = img.flip(axe='v')
-    rclck = img.resize(50,20,20,20)"""
-    """gray = img.gray_scale()
-    gary = gray.rotate(True)
-    MyImage.save_image(gray,"gray_iamge.png")"""
-    # testing filters
-    #filtered_img = img.mean_filter(3)
-    """g_img = img.gaussian_filter(5,1)
-    MyImage.save_image(g_img,"gaussian.png")"""
-
-    #img.normalized_histogram()
-    # img.gray_scale().mean_filter_region(5).normalized_histogram()
     MyImage.show_image(img.mean_filter_center(3))
+
+if __name__ == "__main__":
+    main()
