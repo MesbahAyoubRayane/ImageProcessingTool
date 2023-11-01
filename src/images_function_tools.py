@@ -116,6 +116,22 @@ class MyImage:
                     fimg[x, self.height - y - 1] = self[x,y]
         
         return fimg
+    
+    def flip_simd(self,axe:str):
+        axe = axe.lower()
+        if axe not in ('h','v'):raise Exception("axe must be v or h")
+        tmp =np.zeros(self.width*self.height).reshape(self.r.shape)
+        
+        if axe == 'v':
+            fimg = MyImage(
+                np.array([row[::-1] for row in self.r]),
+                np.array([row[::-1] for row in self.g]),
+                np.array([row[::-1] for row in self.b]),self.mode)
+        elif axe == 'h':
+            fimg = MyImage(np.array([row for row in self.r[::-1]]),np.array([row for row in self.g[::-1]]),np.array([row for row in self.b[::-1]]),self.mode)
+            
+        
+        return fimg
 
     # filters
     def gray_scale(self):
@@ -378,3 +394,22 @@ class MyImage:
         if self.mode.upper() == 'L':
             G = (self.r.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[0] + self.g.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[1]\
             + self.b.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[2]) / sum(MyImage.DEFAUL_GRAY_SCALE_COEF)
+
+
+if __name__ == "__main__":
+    path =  "rsrs/img2.jpg"
+    img:MyImage = MyImage.open_image_as_rgb_matrices(path)
+    """rclck = img.rotate(reverse=True)
+    rclck = img.flip(axe='v')
+    rclck = img.resize(50,20,20,20)"""
+    """gray = img.gray_scale()
+    gary = gray.rotate(True)
+    MyImage.save_image(gray,"gray_iamge.png")"""
+    # testing filters
+    #filtered_img = img.mean_filter(3)
+    """g_img = img.gaussian_filter(5,1)
+    MyImage.save_image(g_img,"gaussian.png")"""
+
+    #img.normalized_histogram()
+    # img.gray_scale().mean_filter_region(5).normalized_histogram()
+    MyImage.show_image(img.flip_simd('h'))
