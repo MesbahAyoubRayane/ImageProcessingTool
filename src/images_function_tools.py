@@ -100,6 +100,19 @@ class MyImage:
                     rimg[y,self.width - x - 1] = self[x,y]
         return rimg
     
+    def rotate_simd(self,reverse=False):
+        
+        if not reverse:
+            r = np.array([self.r[:,i][::-1] for i in range(self.width)])
+            g = np.array([self.g[:,i][::-1] for i in range(self.width)])
+            b = np.array([self.b[:,i][::-1] for i in range(self.width)])
+        else:
+            r = np.array([self.r[:,i] for i in range(self.width)])
+            g = np.array([self.g[:,i] for i in range(self.width)])
+            b = np.array([self.b[:,i] for i in range(self.width)])
+            
+        return MyImage(r,g,b,self.mode)
+    
     def flip(self,axe:str):
         axe = axe.lower()
         if axe not in ('h','v'):raise Exception("axe must be v or h")
@@ -118,6 +131,9 @@ class MyImage:
         return fimg
     
     def flip_simd(self,axe:str):
+        """
+        flip_simd : as the name suggestes , it allow verticale and horizantal fliping of the image , it  uses the numpy array simd operation to accelerate the process  
+        """
         axe = axe.lower()
         if axe not in ('h','v'):raise Exception("axe must be v or h")
         tmp =np.zeros(self.width*self.height).reshape(self.r.shape)
@@ -129,8 +145,7 @@ class MyImage:
                 np.array([row[::-1] for row in self.b]),self.mode)
         elif axe == 'h':
             fimg = MyImage(np.array([row for row in self.r[::-1]]),np.array([row for row in self.g[::-1]]),np.array([row for row in self.b[::-1]]),self.mode)
-            
-        
+
         return fimg
 
     # filters
@@ -385,31 +400,9 @@ class MyImage:
             axe  = plt.subplot2grid((4,2),(3,1))
             axe.plot(values,cummulative,color='blue')
 
-
-
         plt.show()
-
 
     def heat_map(self):
         if self.mode.upper() == 'L':
             G = (self.r.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[0] + self.g.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[1]\
             + self.b.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[2]) / sum(MyImage.DEFAUL_GRAY_SCALE_COEF)
-
-
-if __name__ == "__main__":
-    path =  "rsrs/img2.jpg"
-    img:MyImage = MyImage.open_image_as_rgb_matrices(path)
-    """rclck = img.rotate(reverse=True)
-    rclck = img.flip(axe='v')
-    rclck = img.resize(50,20,20,20)"""
-    """gray = img.gray_scale()
-    gary = gray.rotate(True)
-    MyImage.save_image(gray,"gray_iamge.png")"""
-    # testing filters
-    #filtered_img = img.mean_filter(3)
-    """g_img = img.gaussian_filter(5,1)
-    MyImage.save_image(g_img,"gaussian.png")"""
-
-    #img.normalized_histogram()
-    # img.gray_scale().mean_filter_region(5).normalized_histogram()
-    MyImage.show_image(img.flip_simd('h'))

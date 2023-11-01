@@ -7,7 +7,6 @@ class Application(tk.Tk):
         super().__init__()
         self.title("Image processing software")
         self.geometry("400x500")
- 
         self.__add_components__()
 
     def __add_components__(self):
