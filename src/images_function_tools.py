@@ -32,18 +32,16 @@ class MyImage:
         return self.width,self.height
 
     def pixels(self):
-        pixels = []
         if self.mode.upper() == 'RGB':
             for x in range(self.width):
                 for y in range(self.height):
-                    pixels.append((y,x,self.r[y,x],self.g[y,x],self.b[y,x]))
+                    yield y,x,self.r[y,x],self.g[y,x],self.b[y,x]
         elif self.mode.upper() == 'L':
             gray_coef = MyImage.DEFAUL_GRAY_SCALE_COEF
             for x in range(self.width):
                 for y in range(self.height):
                     g = int((gray_coef[0] * self.r[y,x] + gray_coef[1]*self.g[y,x] + gray_coef[2] * self.b[y,x])/sum(gray_coef))
-                    pixels.append((x,y,g))
-        return pixels
+                    yield x,y,g
 
     def __getitem__(self,indecies:(int,int)):
         x,y = self.__prepare_indecies__(int(indecies[0]),int(indecies[1]))
@@ -156,6 +154,18 @@ class MyImage:
         B = self.b * coef[2]
         Gray = np.array((R + G + B) / sum(coef),dtype=np.int8)
         return MyImage(Gray,Gray,Gray,'L')
+
+    def red_scale(self):
+        z = np.zeros(self.r.shape)
+        return MyImage(self.r,z,z,"RGB")
+    
+    def blue_scale(self):
+        z = np.zeros(self.r.shape)
+        return MyImage(z,z,self.b,"RGB")
+    
+    def green_scale(self):
+        z = np.zeros(self.r.shape)
+        return MyImage(z,self.g,z,"RGB")
 
     def mean_filter_region(self,size:int):
         if isinstance(size,int):
