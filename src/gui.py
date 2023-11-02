@@ -3,16 +3,24 @@ from tkinter import ttk
 
 
 class Application(tk.Tk):
+    """
+    The application will be initialized by the init , inside the innit several calls for deferent init function will occure , to create the components the layout and other stuff
+    At the end a binding function will be called to define behaviours
+    """
     def __init__(self):
         super().__init__()
         self.title("Image processing software")
         self.geometry("400x500")
-        self.__add_components__()
+        self.__create_components__()
 
-    def __add_components__(self):
-        self.__add__menu_bare__()
+    def __create_components__(self):
+        self.__create__menu_bare__()
 
-    def __add__menu_bare__(self):
+
+    def __create_layout__(self):
+        ...
+
+    def __create__menu_bare__(self):
         menu = tk.Menu(self)
         menues:dict[str:tk.Menu] = {}
         self.configure(menu=menu)

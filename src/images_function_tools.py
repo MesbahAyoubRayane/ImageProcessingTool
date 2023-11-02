@@ -146,6 +146,29 @@ class MyImage:
 
         return fimg
     
+    def rotate(self,theta:float|int) -> Self:
+        """ theta must be in degrees """
+        X1 = np.arange(len(self.r[0]))
+        Y1 = np.arange(len(self.r))
+        X0,Y0 = len(self.r[0])/2,len(self.r)/2
+        
+        r = np.zeros(self.r.shape)
+        g = np.zeros(self.g.shape)
+        b = np.zeros(self.b.shape)
+
+        theta = (theta * 2 * np.pi)/360
+        SIN_THETA,COS_THETA = np.sin(theta),np.cos(theta)
+        for x in X1:
+            for y in Y1:
+                x2 = int((x - X0)*COS_THETA - (y - Y0)*SIN_THETA + X0)
+                y2 = int(SIN_THETA * (x - X0) + COS_THETA*(y - Y0) + Y0)
+                if not 0<=x2<len(self.r[0]) or not  0<=y2<len(self.r): continue
+                r[y2,x2] = self.r[y,x]
+                g[y2,x2] = self.g[y,x]
+                b[y2,x2] = self.b[y,x]
+        
+        return MyImage(r,g,b,self.mode)
+    
     def histo_shift(self,i:int) -> Self:
         nr = (np.array(self.r,dtype=np.int32) + i) % 256
         ng = (np.array(self.g,dtype=np.int32) + i) % 256
