@@ -10,14 +10,24 @@ class Application(tk.Tk):
         self.__add_components__()
 
     def __add_components__(self):
-         ...
+        self.__add__menu_bare__()
 
     def __add__menu_bare__(self):
         menu = tk.Menu(self)
-        menues:list[tk.Menu] = ["Files","Image editing","Segmantation","Image analysing"]
-
-
+        menues:dict[str:tk.Menu] = {}
         self.configure(menu=menu)
+
+        for m in ["Files","Image editing","Segmantation","Image analysing"]:
+            sub_menu = tk.Menu(menu,tearoff=False)
+            menu.add_cascade(label=m,menu=sub_menu)
+            menues[m] = sub_menu
+        
+        # the Files sub menu
+        menues["Files"].add_command(label='Open Image',command=None)
+        menues["Files"].add_command(label='Save Image',command=None)
+        menues["Files"].add_separator()
+        menues["Files"].add_command(label='Exit',command=None)
+
 
     def run(self):
         self.mainloop()

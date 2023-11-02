@@ -284,9 +284,6 @@ class MyImage:
         delta_b = (delta_b + 255)//2
         return MyImage(delta_r,delta_g,delta_b,self.mode)
     
-    
-        
-
 
     # static functions
     @staticmethod
