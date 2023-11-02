@@ -145,6 +145,12 @@ class MyImage:
             fimg = MyImage(np.array([row for row in self.r[::-1]]),np.array([row for row in self.g[::-1]]),np.array([row for row in self.b[::-1]]),self.mode)
 
         return fimg
+    
+    def histo_shift(self,i:int) -> Self:
+        nr = (np.array(self.r,dtype=np.int32) + i) % 256
+        ng = (np.array(self.g,dtype=np.int32) + i) % 256
+        nb = (np.array(self.b,dtype=np.int32) + i) % 256
+        return MyImage(nr,ng,nb,self.mode)
 
     # filters
     def gray_scale(self):
@@ -233,7 +239,56 @@ class MyImage:
                 copy_img.g[y:y+size,x:x+size] = conv_matrix * self.g[y:y+size,x:x+size]
                 copy_img.b[y:y+size,x:x+size] = conv_matrix * self.b[y:y+size,x:x+size]
         return copy_img
+    
+    def negative(self) -> Self:
+        r = 255 - np.array(self.r,dtype=np.int32)
+        g = 255 - np.array(self.g,dtype=np.int32)
+        b = 255 - np.array(self.b,dtype=np.int32)
+        return MyImage(r,g,b,self.mode) 
+    
+    def heat_map(self) -> Self:
+        # from the top
+        delta_r_t = np.zeros(self.r.shape,dtype=np.int32)
+        delta_g_t = np.zeros(self.g.shape,dtype=np.int32)
+        delta_b_t = np.zeros(self.b.shape,dtype=np.int32)
+        for i in range(len(self.r)-2):
+            delta_r_t[i+1] = self.r[i+2] - self.r[i]
+            delta_g_t[i+1] = self.g[i+2] - self.g[i]
+            delta_b_t[i+1] = self.b[i+2] - self.b[i]
+    
+        # from the left
+        delta_r_l = np.zeros(self.r.shape,dtype=np.int32)
+        delta_g_l = np.zeros(self.g.shape,dtype=np.int32)
+        delta_b_l = np.zeros(self.b.shape,dtype=np.int32)
+        
+        for i in range(0,len(self.r[0]) - 2,2):
+            delta_r_l[:,i+1] = self.r[:,i+2] - self.r[:,i]
+            delta_g_l[:,i+1] = self.g[:,i+2] - self.r[:,i]
+            delta_b_l[:,i+1] = self.b[:,i+2] - self.r[:,i]  
 
+        delta_r = np.zeros(self.r.shape,dtype=np.int32)
+        delta_g = np.zeros(self.g.shape,dtype=np.int32)
+        delta_b = np.zeros(self.b.shape,dtype=np.int32)
+        
+        for i in range(len(self.r)):
+            for j in range(len(self.r[0])):
+                x  = delta_r_l[i,j] if abs(delta_r_l[i,j]) > abs(delta_r_t[i,j]) else delta_r_t[i,j]
+                delta_r[i,j] = x
+                x  = delta_g_l[i,j] if abs(delta_g_l[i,j]) > abs(delta_g_t[i,j]) else delta_g_t[i,j]
+                delta_g[i,j] = x
+                x  = delta_b_l[i,j] if abs(delta_b_l[i,j]) > abs(delta_b_t[i,j]) else delta_b_t[i,j]
+                delta_b[i,j] = x
+        
+        delta_r = (delta_r + 255)//2
+        delta_g = (delta_g + 255)//2
+        delta_b = (delta_b + 255)//2
+        return MyImage(delta_r,delta_g,delta_b,self.mode)
+    
+    
+        
+
+
+    # static functions
     @staticmethod
     def new(w:int,h:int,mode,defalut_value:tuple[int,int,int]|int) -> Self:
         if mode.upper() == 'RGB':
@@ -412,11 +467,6 @@ class MyImage:
 
         plt.show()
 
-    def heat_map(self):
-        if self.mode.upper() == 'L':
-            G = (self.r.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[0] + self.g.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[1]\
-            + self.b.flatten() * MyImage.DEFAUL_GRAY_SCALE_COEF[2]) / sum(MyImage.DEFAUL_GRAY_SCALE_COEF)
-    
     def show_images(images:list[Self]):
         DEFAULT_IMAGES_PER_ROW = 3
         number_of_rows = len(images)//DEFAULT_IMAGES_PER_ROW + 1 if len(images) % DEFAULT_IMAGES_PER_ROW != 0 else len(images)
