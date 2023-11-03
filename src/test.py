@@ -6,4 +6,4 @@ from tkinter import filedialog
 
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    img.mean_filter(5).show_image()
+    img.gaussian_filter(11,3).histo_shift(20).show_image()

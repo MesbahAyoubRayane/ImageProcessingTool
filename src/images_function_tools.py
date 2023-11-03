@@ -234,29 +234,37 @@ class MyImage:
                 
         return copy_img
 
-
-    def gaussian_filter(self,size:int,std:float):
+    # TODO this function doesn't work properly
+    def gaussian_filter(self,size:int,std:float,CONST=10):
         if isinstance(size,int):
             if size < 2:
                 raise ValueError(f'size must be > 1')
             if size > self.width or size >self.height:
                 raise ValueError(f'the provided size is so large')
+            if size %2 == 0:
+                raise ValueError(f"The size must be odd number")
         else:
             raise ValueError(f"{type(size)} can't be used as a filter")
         def gaussian(i,j,size,std):
             tmp = -((i - size // 2)**2 + (j - size //2)**2)/(2*std**2)
             tmp = np.power(np.e,tmp)
-            return tmp/(2*np.pi*std**2)
+            return CONST*tmp/(2*np.pi*std**2)
         
-        conv_matrix = np.array([[gaussian(i,j,size,std) for i in range(size)] for j in range(size)]) 
-        conv_matrix = conv_matrix / np.sum(conv_matrix)    
-        copy_img = MyImage(np.zeros(self.r.shape),np.zeros(self.r.shape),np.zeros(self.r.shape),self.mode)
+        conv_matrix = np.array([[gaussian(i,j,size,std) for i in range(size)] for j in range(size)],dtype=np.int8)
+        #conv_matrix = conv_matrix / np.sum(conv_matrix)  
+        copy_img = self.copy()
 
-        for x in range(size//2,self.width-size,size):
-            for y in range(size//2,self.height-size,size):
-                copy_img.r[y:y+size,x:x+size] = conv_matrix * self.r[y:y+size,x:x+size]
-                copy_img.g[y:y+size,x:x+size] = conv_matrix * self.g[y:y+size,x:x+size]
-                copy_img.b[y:y+size,x:x+size] = conv_matrix * self.b[y:y+size,x:x+size]
+        for x in range(size//2,self.width-size//2):
+            for y in range(size//2,self.height-size//2):
+                try:
+                    r = np.array(self.r[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                    g = np.array(self.g[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                    b = np.array(self.b[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                    copy_img.r[y,x] = int((conv_matrix * r)[size//2,size//2]%256)
+                    copy_img.g[y,x] = int((conv_matrix * g)[size//2,size//2]%256)
+                    copy_img.b[y,x] = int((conv_matrix * b)[size//2,size//2]%256)
+                except Exception as e:
+                    print(x,y)
         return copy_img
     
     def negative(self) -> Self:
