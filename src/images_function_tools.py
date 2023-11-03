@@ -43,46 +43,59 @@ class MyImage:
                     g = int((gray_coef[0] * self.r[y,x] + gray_coef[1]*self.g[y,x] + gray_coef[2] * self.b[y,x])/sum(gray_coef))
                     yield x,y,g
 
-    def __getitem__(self,indecies:(int,int)):
-        x,y = self.__prepare_indecies__(int(indecies[0]),int(indecies[1]))
-        self.__test_indecies__(x,y)
-        return self.r[y,x],self.g[y,x],self.b[y,x]
+    def __getitem__(self,indecies:(int,int)) -> tuple[int,int,int]:
+        x,y = self.__test_indecies__(indecies[0],indecies[1])
+        return int(self.r[y,x]),int(self.g[y,x]),int(self.b[y,x])
     
-    def __setitem__(self,indecies:(int,int),value:tuple[int,int,int]):
-        r,g,b = value
-        x,y = self.__prepare_indecies__(int(indecies[0]),int(indecies[1]))
-        self.__test_indecies__(x,y)
-        for v in r,g,b:
-            if not 0<=v<256:
-                raise Exception('RGB values must be between 0 and 255 inclusive')
-        self.r[y,x],self.g[y,x],self.b[y,x] = r,g,b
+    def __setitem__(self,indecies:(int,int),value:tuple[int,int,int]|int):
+        x,y = self.__test_indecies__(indecies[0],indecies[1])
+        if self.mode.upper() == "RGB":
+            r,g,b = value    
+            for v in r,g,b:
+                if not isinstance(v,int):
+                    raise ValueError(f"the provided value is not an integer v={v}")
+                if not 0<=v<256:
+                    raise ValueError('RGB values must be between 0 and 255 inclusive')
+            self.r[y,x],self.g[y,x],self.b[y,x] = r,g,b
+        
+        elif self.mode.upper() == 'L':
+            if not isinstance(value,int):
+                raise ValueError(f"the provided value is not an integer v={v}")
+            if not 0<=value<256:
+                raise ValueError('RGB values must be between 0 and 255 inclusive')
+            self.r[y,x],self.g[y,x],self.b[y,x] = value,value,value
+
     
     def __test_indecies__(self,x,y):
         if not 0<=x<self.width:
             raise Exception(f"x value {x}, is greater than the width of the image {self.width}")
         if not 0<=y<self.height:
             raise Exception(f"y value {y}, is greater than the height of the image {self.height}")
-    
-    def __prepare_indecies__(self,x,y):
         return int(x),int(y)
+    
+    def copy(self):
+        # creat a deep copy of the image
+        return MyImage(self.r,self.g,self.b,self.mode)
 
     def cut(self,x:int,y:int,w:int,h:int):
-        x,y = int(x),int(y)
-        if not 0<=x<self.width or not 0<=y<self.height:
-            raise Exception('The x and y positions are not valide')
-        
-        w,h = int(w),int(h)
-        if not 1<=w<=self.width - x or not 1<=h<self.height - y:
-            raise Exception('The new width and the new height must be sub-interval from the image width and height')
+        """
+        return a sub_image from the original image starting from the point x,y (top-left) to x+w,y+h (bottom-right)
+        """
+        x,y = self.__test_indecies__(x,y)
 
+        w,h = int(w),int(h)
+        if w <= 0 or h <= 0:
+            raise ValueError(f"the width and height must be a positive value , w = {w},h = {h}")
+        
         tmp = np.zeros(w * h).reshape((h,w))
         rimg = MyImage(tmp,tmp,tmp,self.mode)
         for _x in range(w):
             for _y in range(h):
-                rimg[_x,_y] = self[x+_x,y+_y]
+                if 0<=_x<self.width and 0<=_y<self.height:
+                    rimg[_x,_y] = self[x+_x,y+_y]
         return rimg 
 
-    def rotate(self,reverse=False):
+    def rotate_90_degrees(self,reverse=False):
         """
             This method rotate the image and return a new MyImage,if reverse=False it rotate in the clock wise direction
         """
@@ -98,8 +111,8 @@ class MyImage:
                     rimg[y,self.width - x - 1] = self[x,y]
         return rimg
     
-    def rotate_simd(self,reverse=False):
-        
+    def rotate_90_degrees_simd(self,reverse=False):
+        """simd function are optimized using numpy vectorial operations"""
         if not reverse:
             r = np.array([self.r[:,i][::-1] for i in range(self.width)])
             g = np.array([self.g[:,i][::-1] for i in range(self.width)])
@@ -196,45 +209,28 @@ class MyImage:
         z = np.zeros(self.r.shape)
         return MyImage(z,self.g,z,"RGB")
 
-    def mean_filter_region(self,size:int):
-        if isinstance(size,int):
-            if size < 2:
-                raise ValueError(f'size must be > 1')
-            if size > self.width or size >self.height:
-                raise ValueError(f'the provided size is so large')
-        else:
-            raise ValueError(f"{type(size)} can't be used as a filter")
-        
-        copy_img = MyImage(np.zeros(self.r.shape),np.zeros(self.r.shape),np.zeros(self.r.shape),self.mode)
-        conv_matrix = np.full((size,size),1/(size**2))
-
-        for x in range(size//2,self.width-size ,size):
-            for y in range(size//2,self.height-size,size):
-                copy_img.r[y:y+size,x:x+size] = np.full((size,size),np.sum(conv_matrix * self.r[y:y+size,x:x+size]))
-                copy_img.g[y:y+size,x:x+size] = np.full((size,size),np.sum(conv_matrix * self.g[y:y+size,x:x+size]))
-                copy_img.b[y:y+size,x:x+size] = np.full((size,size),np.sum(conv_matrix * self.b[y:y+size,x:x+size]))
-        return copy_img
-
-
-    def mean_filter_center(self,size:int):
+    def mean_filter(self,size:int):
         if isinstance(size,int):
             if size < 2:
                 raise ValueError(f'size must be > 1')
             if size %2 == 0:
-                raise ValueError(f"The size mnust be even")
+                raise ValueError(f"The size must be odd number")
             if size > self.width or size >self.height:
                 raise ValueError(f'the provided size is so large')
         else:
             raise ValueError(f"{type(size)} can't be used as a filter")
         
-        copy_img = MyImage(np.zeros(self.r.shape),np.zeros(self.r.shape),np.zeros(self.r.shape),self.mode)
+        copy_img = self.copy()
         conv_matrix = np.full((size,size),1/(size**2))
         
         for x in range(size//2,self.width-size//2):
             for y in range(size//2,self.height-size//2):
-                copy_img.r[y,x] = (conv_matrix * self.r[y-size//2:y+size//2+1 , x-size//2:x+size//2+1])[size//2,size//2]
-                copy_img.g[y,x] = (conv_matrix * self.g[y-size//2:y+size//2+1 , x-size//2:x+size//2+1])[size//2,size//2]
-                copy_img.b[y,x] = (conv_matrix * self.b[y-size//2:y+size//2+1, x-size//2:x+size//2+1])[size//2,size//2]
+                r = np.array(self.r[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                g = np.array(self.g[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                b = np.array(self.b[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                copy_img.r[y,x] = ((conv_matrix * r).sum())
+                copy_img.g[y,x] = ((conv_matrix * g).sum())
+                copy_img.b[y,x] = ((conv_matrix * b).sum())
                 
         return copy_img
 
@@ -358,14 +354,12 @@ class MyImage:
         
         img_to_save.save(path)
     
-    @staticmethod
-    def show_image(img):
-        img:MyImage = img
-        img_to_show = Image.new("RGB",img.dimensions)
+    def show_image(self):
+        img_to_show = Image.new("RGB",self.dimensions)
         
-        for x in range(img.width):
-            for y in range(img.height):
-                img_to_show.putpixel((x,y),img[x,y])
+        for x in range(self.width):
+            for y in range(self.height):
+                img_to_show.putpixel((x,y),self[x,y])
         plt.imshow(img_to_show)
         plt.show()
 

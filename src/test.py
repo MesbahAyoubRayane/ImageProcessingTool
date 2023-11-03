@@ -6,5 +6,4 @@ from tkinter import filedialog
 
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    img.gray_scale().histogram()
-    img.gray_scale().histogram()
+    img.mean_filter(5).show_image()
