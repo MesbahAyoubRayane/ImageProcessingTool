@@ -266,6 +266,110 @@ class MyImage:
                 except Exception as e:
                     print(x,y)
         return copy_img
+
+    # Haitem's Codes:
+        def gaussian_filter(self, size: int, std: float):
+        if isinstance(size, int):
+            if size < 2:
+                raise ValueError(f'size must be > 1')
+            if size > self.width or size > self.height:
+                raise ValueError(f'the provided size is too large')
+        else:
+            raise ValueError(f"{type(size)} can't be used as a filter")
+
+        # Create a Gaussian kernel using NumPy
+        x, y = np.meshgrid(np.arange(size), np.arange(size))
+        kernel = np.exp(-((x - size // 2) ** 2 + (y - size // 2) ** 2) / (2 * std ** 2))
+        kernel /= (2 * np.pi * std ** 2)
+
+        # Normalize the kernel
+        kernel /= kernel.sum()
+
+        # Pad the input image using NumPy
+        """
+        Padding an image is a common practice in image processing when you want to apply convolution or filtering operations 
+        Padding involves adding extra pixels around the edges of the image 
+        to ensure that the filter kernel can be applied to all the pixels, even those at the image boundary
+        """
+        extended_r = np.pad(self.r, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+        extended_g = np.pad(self.g, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+        extended_b = np.pad(self.b, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+
+        copy_img = self.copy()
+
+        for x in range(size // 2, self.width - size // 2):
+            for y in range(size // 2, self.height - size // 2):
+                r_patch = extended_r[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
+                g_patch = extended_g[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
+                b_patch = extended_b[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
+
+                # Apply the Gaussian filter using element-wise operations
+                r_filtered = np.sum(r_patch * kernel)
+                g_filtered = np.sum(g_patch * kernel)
+                b_filtered = np.sum(b_patch * kernel)
+
+                copy_img.r[y, x] = int(np.clip(r_filtered, 0, 255))
+                copy_img.g[y, x] = int(np.clip(g_filtered, 0, 255))
+                copy_img.b[y, x] = int(np.clip(b_filtered, 0, 255))
+
+        return copy_img
+
+    def color_segmt(self, threshold: int):
+        kernel1 = np.full(shape=(3, 3), fill_value=0)
+        kernel1[:, 0] = -1
+        kernel1[:, -1] = 1
+
+        kernel2 = np.full(shape=(3, 3), fill_value=0)
+        kernel2[0, :] = -1
+        kernel2[-1, :] = 1
+
+        size = 3
+
+        # Pad the input image using NumPy
+        extended_r = np.pad(self.r, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+        extended_g = np.pad(self.g, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+        extended_b = np.pad(self.b, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+
+        # Create a new image to store the processed data
+        segmented_img = self.copy()
+
+        for x in range(size // 2, self.width - size // 2):
+            for y in range(size // 2, self.height - size // 2):
+                r_patch = extended_r[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
+                g_patch = extended_g[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
+                b_patch = extended_b[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
+
+                # Apply the Gaussian filter using element-wise operations (Convolution)
+                r_i = np.sum(r_patch * kernel1)
+                g_i = np.sum(g_patch * kernel1)
+                b_i = np.sum(b_patch * kernel1)
+
+                r_j = np.sum(r_patch * kernel2)
+                g_j = np.sum(g_patch * kernel2)
+                b_j = np.sum(b_patch * kernel2)
+
+                # Calculate the magnitude of the gradients
+                Gr_new = np.sqrt(np.square(r_i) + np.square(r_j))
+                Gg_new = np.sqrt(np.square(g_i) + np.square(g_j))
+                Gb_new = np.sqrt(np.square(b_i) + np.square(b_j))
+
+                # Apply thresholding
+                if Gr_new > threshold:
+                    segmented_img.r[y, x] = 255
+                else:
+                    segmented_img.r[y, x] = 0
+
+                if Gg_new > threshold:
+                    segmented_img.g[y, x] = 255
+                else:
+                    segmented_img.g[y, x] = 0
+
+                if Gb_new > threshold:
+                    segmented_img.b[y, x] = 255
+                else:
+                    segmented_img.b[y, x] = 0
+
+        return segmented_img
     
     def negative(self) -> Self:
         r = 255 - np.array(self.r,dtype=np.int32)
