@@ -210,6 +210,9 @@ class MyImage:
         return MyImage(r,g,b,self.mode) 
     
     def expansion_dynamique(self):
+        """
+        Note before using this function you need to remove outliers because then can change the results dramaticly
+        """
         if self.mode == "RGB":
             MIN = self.r.flatten().min()
             MAX = self.r.flatten().max()
@@ -271,39 +274,6 @@ class MyImage:
                 copy_img.g[y,x] = ((conv_matrix * g).sum())
                 copy_img.b[y,x] = ((conv_matrix * b).sum())
                 
-        return copy_img
-
-    # TODO this function doesn't work properly
-    def gaussian_filter(self,size:int,std:float,CONST=10):
-        if isinstance(size,int):
-            if size < 2:
-                raise ValueError(f'size must be > 1')
-            if size > self.width or size >self.height:
-                raise ValueError(f'the provided size is so large')
-            if size %2 == 0:
-                raise ValueError(f"The size must be odd number")
-        else:
-            raise ValueError(f"{type(size)} can't be used as a filter")
-        def gaussian(i,j,size,std):
-            tmp = -((i - size // 2)**2 + (j - size //2)**2)/(2*std**2)
-            tmp = np.power(np.e,tmp)
-            return CONST*tmp/(2*np.pi*std**2)
-        
-        conv_matrix = np.array([[gaussian(i,j,size,std) for i in range(size)] for j in range(size)],dtype=np.int8)
-        #conv_matrix = conv_matrix / np.sum(conv_matrix)  
-        copy_img = self.copy()
-
-        for x in range(size//2,self.width-size//2):
-            for y in range(size//2,self.height-size//2):
-                try:
-                    r = np.array(self.r[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
-                    g = np.array(self.g[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
-                    b = np.array(self.b[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
-                    copy_img.r[y,x] = int((conv_matrix * r)[size//2,size//2]%256)
-                    copy_img.g[y,x] = int((conv_matrix * g)[size//2,size//2]%256)
-                    copy_img.b[y,x] = int((conv_matrix * b)[size//2,size//2]%256)
-                except Exception as e:
-                    print(x,y)
         return copy_img
 
     # Haitem's Codes:
@@ -410,63 +380,6 @@ class MyImage:
 
         return segmented_img
     
-    def heat_map(self):
-        # from the top
-        delta_r_t = np.zeros(self.r.shape,dtype=np.int32)
-        delta_g_t = np.zeros(self.g.shape,dtype=np.int32)
-        delta_b_t = np.zeros(self.b.shape,dtype=np.int32)
-        for i in range(len(self.r)-2):
-            delta_r_t[i+1] = self.r[i+2] - self.r[i]
-            delta_g_t[i+1] = self.g[i+2] - self.g[i]
-            delta_b_t[i+1] = self.b[i+2] - self.b[i]
-    
-        # from the left
-        delta_r_l = np.zeros(self.r.shape,dtype=np.int32)
-        delta_g_l = np.zeros(self.g.shape,dtype=np.int32)
-        delta_b_l = np.zeros(self.b.shape,dtype=np.int32)
-        
-        for i in range(0,len(self.r[0]) - 2,2):
-            delta_r_l[:,i+1] = self.r[:,i+2] - self.r[:,i]
-            delta_g_l[:,i+1] = self.g[:,i+2] - self.r[:,i]
-            delta_b_l[:,i+1] = self.b[:,i+2] - self.r[:,i]  
-
-        delta_r = np.zeros(self.r.shape,dtype=np.int32)
-        delta_g = np.zeros(self.g.shape,dtype=np.int32)
-        delta_b = np.zeros(self.b.shape,dtype=np.int32)
-        
-        for i in range(len(self.r)):
-            for j in range(len(self.r[0])):
-                x  = delta_r_l[i,j] if abs(delta_r_l[i,j]) > abs(delta_r_t[i,j]) else delta_r_t[i,j]
-                delta_r[i,j] = x
-                x  = delta_g_l[i,j] if abs(delta_g_l[i,j]) > abs(delta_g_t[i,j]) else delta_g_t[i,j]
-                delta_g[i,j] = x
-                x  = delta_b_l[i,j] if abs(delta_b_l[i,j]) > abs(delta_b_t[i,j]) else delta_b_t[i,j]
-                delta_b[i,j] = x
-        
-        delta_r = (delta_r + 255)//2
-        delta_g = (delta_g + 255)//2
-        delta_b = (delta_b + 255)//2
-        return MyImage(delta_r,delta_g,delta_b,self.mode)
-    
-
-    def create_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
-        if self.mode == "RGB":
-            hr = np.full((256,),fill_value=0,dtype=np.int32)
-            hg = np.full((256,),fill_value=0,dtype=np.int32)
-            hb = np.full((256,),fill_value=0,dtype=np.int32)
-            for ri,gi,bi in zip(self.r.flatten(),self.g.flatten(),self.b.flatten()):
-                hr[ri] += 1
-                hg[gi] += 1
-                hb[bi] += 1
-            
-            return hr,hg,hb
-
-        elif self.mode == "L":
-            hgray = np.full((256,),fill_value=0,dtype=np.int32)
-            for v in self.r.flatten():
-                hgray[v] += 1
-            return hgray
-    
     def create_cumulated_histograme(self) ->  np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "RGB":
             hr,hg,hb = self.create_histograme()
@@ -526,6 +439,84 @@ class MyImage:
             for i in range(1,256):
                 cnhgray[i] = nhgray[i] + cnhgray[i-1]
             return cnhgray
+    
+    def compute_mean(self) -> tuple[float,float,float]|float:
+        if self.mode == "RGB":
+            return self.r.flatten().mean(),self.g.flatten().mean(),self.b.flatten().mean()
+        elif self.mode == "L":
+            return self.r.flatten().mean()
+        
+    def compute_std(self) -> tuple[float,float,float]|float:
+        if self.mode == "RGB":
+            return self.r.flatten().std(),self.g.flatten().std(),self.b.flatten().std()
+        elif self.mode == "L":
+            return self.r.flatten().std()
+    
+    def compute_median(self) -> tuple[float,float,float]|int:
+        if self.mode == "RGB":
+            return np.median(self.r.flatten()),np.median(self.g.flatten()),np.median(self.b.flatten())
+        elif self.mode == "L":
+            return np.median(self.r.flatten())
+        
+    def remove_outliers(self,metric:str,threash_hold:int|float):
+        """
+        This function compute the mean and median and std then test if each pixel between mean - threshold * std and mean + threashold * std if it is not then it will replace it but either the mean of the median  
+        """
+        metric = metric.upper()
+        if threash_hold <= 0:
+            raise ValueError("threshold must be an positive number")
+        
+        if metric not in ('MEAN','MEDIAN'):
+            raise ValueError(f"The provided value for metric {metric} is not correct , choose from {('MEAN','MEDIAN')}")
+        
+        if self.mode == "L":
+            mean = self.compute_mean()
+            median = self.compute_median()
+            std = self.compute_std()
+            upper_bound = mean + threash_hold * std
+            lower_bound = mean - threash_hold * std
+            nv = np.full(self.r.size,0,dtype=np.uint8)
+            replcament = mean if metric == "MEAN" else median
+            for i,v in enumerate(self.r.flatten()):
+                if lower_bound<v<upper_bound:
+                    nv[i] = v
+                else:
+                    nv[i] = replcament
+            nv = nv.reshape(self.r.shape)
+            return MyImage(nv,nv,nv,"L")
+        
+        elif self.mode =='RGB':
+            mean_r,mean_g,mean_b = self.compute_mean()
+            median_r,median_g,median_b = self.compute_median()
+            std_r,std_g,std_b = self.compute_std()
+            replcament_r,replcament_g,replcament_b = (mean_r,mean_g,mean_b) if metric =="MEAN" else (median_r,median_g,median_b)
+            
+            lower_bound_r,lower_bound_g,lower_bound_b = mean_r - threash_hold * std_r,mean_g - threash_hold * std_g,mean_b - threash_hold * std_b
+            upper_bound_r,upper_bound_g,upper_bound_b = mean_r +  threash_hold* std_r,mean_g + threash_hold * std_g,mean_b +  threash_hold * std_b 
+
+            nv_r = np.full(self.r.size,0,dtype=np.uint8)
+            nv_g = np.full(self.r.size,0,dtype=np.uint8)
+            nv_b = np.full(self.r.size,0,dtype=np.uint8)
+            
+            for i,r,g,b in zip(range(self.width*self.height),self.r.flatten(),self.g.flatten(),self.b.flatten()):
+                if lower_bound_r < r < upper_bound_r:
+                    nv_r[i] = r
+                    nv_r[i] = replcament_r
+
+                if lower_bound_g < g < upper_bound_g:
+                    nv_g[i] = g
+                    nv_g[i] = replcament_g
+                
+                if lower_bound_b < b < upper_bound_b:
+                    nv_b[i] = b
+                else:
+                    nv_b[i] = replcament_b
+            
+            return MyImage(nv_r.reshape(self.r.shape),nv_g.reshape(self.g.shape),nv_b.reshape(self.b.shape))
+
+        else:
+            raise Exception(f"mode {self.mode} is not supported")
+
 
     # static functions
     @staticmethod
@@ -533,17 +524,11 @@ class MyImage:
         """
         create a new image having width w and hight h , and initilise the rgb matrices to zero 
         """
-        if mode.upper() == 'RGB':
-            r = np.full((h,w),defalut_value[0],dtype=np.uint8)
-            g = np.full((h,w),defalut_value[1],dtype=np.uint8)
-            b = np.full((h,w),defalut_value[2],dtype=np.uint8)
-            return MyImage(r,g,b,mode=mode)
-        elif mode.upper() == 'L':
-            g = np.full((w,h),defalut_value,dtype=np.uint8)
-            return MyImage(g,g,g,mode=mode)
         mode = mode.upper()
         if mode not in MyImage.MODES:
-            raise ValueError(f'the mode {mode} is not provided')
+            raise ValueError(f'the mode {mode} is not provided')   
+        v = np.full((h,w),0,dtype=np.uint8)
+        return MyImage(v,v,v,mode)
 
     @staticmethod
     def open_image_as_rgb_matrices(path:str):
