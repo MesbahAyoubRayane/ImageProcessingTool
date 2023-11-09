@@ -6,14 +6,19 @@ from tkinter import filedialog
 
 def test_create_histograme_functions(img:MyImage):
     img = img.gray_scale()
-    print(img.create_histograme())
-    print(img.create_cumulated_histograme())
-    print(img.create_normilized_histograme())
+    print(img.histograme())
+    print(img.cumulated_histograme())
+    print(img.normilized_histograme())
     y = img.cumulative_normilized_histo()
     plt.plot(range(256),y)
     plt.show()
 
 def test_histograme_based_operations(img:MyImage):
+    model = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
+    model = model.gray_scale()
+    img = img.gray_scale()
+    MyImage.show_images([img,img.histo_matching(model.cumulative_normilized_histo()),model])
+    return 
     MyImage.show_images([img.histo_equalisation(),img])
     return
     x = img.gray_scale().remove_outliers("mean",3).histo_expansion_dynamique()

@@ -79,7 +79,6 @@ class MyImage:
                 raise ValueError('RGB values must be between 0 and 255 inclusive')
             self.r[y,x],self.g[y,x],self.b[y,x] = value,value,value
 
-    
     def __test_indecies__(self,x,y):
         if not 0<=x<self.width:
             raise Exception(f"x value {x}, is greater than the width of the image {self.width}")
@@ -245,6 +244,33 @@ class MyImage:
                 cp_img[x,y] = int(255 * cdf[int(v)])
         return cp_img
 
+    def histo_matching(self,model):
+        if isinstance(model,MyImage):
+            if self.mode != model.mode:
+                raise ValueError("The selected image model doesn't have the samel mode as the modeled image")
+            cpyimg = self.copy()
+            if self.mode == "L":
+                cnh_model:np.ndarray = model.cumulative_normilized_histo()
+                for x,y,v in self.pixels():
+                    cpyimg[x,y] = int(255 * cnh_model[v])
+        
+            elif self.mode == "RGB":
+                cnh_model_r,cnh_model_g,cnh_model_b = model.cumulative_normilized_histo()
+                for x,y,r,g,b in self.pixels():
+                    cpyimg[x,y] = (int(255*cnh_model_r[r]),int(cnh_model_g[g]),int(cnh_model_b[b]))
+        elif isinstance(model,np.ndarray):
+            cpyimg = self.copy()
+            if self.mode == "L":
+                cnh_model = model
+                for x,y,v in self.pixels():
+                    cpyimg[x,y] = int(255 * cnh_model[v])
+        
+            elif self.mode == "RGB":
+                cnh_model_r,cnh_model_g,cnh_model_b = model.cumulative_normilized_histo()
+                for x,y,r,g,b in self.pixels():
+                    cpyimg[x,y] = (int(255*cnh_model_r[r]),int(cnh_model_g[g]),int(cnh_model_b[b]))
+ 
+        return cpyimg    
 
     # filters
     def gray_scale(self):
@@ -292,7 +318,6 @@ class MyImage:
                 
         return copy_img
 
-    # Haitem's Codes:
     def gaussian_filter(self, size: int, std: float):
         if isinstance(size, int):
             if size < 2:
@@ -396,12 +421,11 @@ class MyImage:
 
         return segmented_img
     
-    def create_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+    def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "L":
             h = np.full((256,),fill_value=0)
             for v in self.r.flatten():
                 h[v] += 1
-            h = h.reshape(self.r.shape)
             return h
         
         elif self.mode == 'RGB':
@@ -412,9 +436,9 @@ class MyImage:
                 hb[b] += 1
             return hr,hg,hb
     
-    def create_cumulated_histograme(self) ->  np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+    def cumulated_histograme(self) ->  np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "RGB":
-            hr,hg,hb = self.create_histograme()
+            hr,hg,hb = self.histograme()
             chr,chg,chb = np.full((256,),dtype=np.int32,fill_value=0),np.full((256,),dtype=np.int32,fill_value=0),np.full((256,),dtype=np.int32,fill_value=0)
             assert hr.sum() == self.width * self.height
             assert hg.sum() == self.width * self.height
@@ -429,7 +453,7 @@ class MyImage:
                 chb[i] = sum_b
             return chr,chg,chb
         elif self.mode == 'L':
-            hgray = self.create_histograme()
+            hgray = self.histograme()
             chgray = np.full((256,),dtype=np.int32,fill_value=0)
             sum_gray = 0
             for i in range(256):
@@ -437,22 +461,22 @@ class MyImage:
                 chgray[i] = sum_gray
             return chgray
 
-    def create_normilized_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+    def normilized_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "RGB":
-            hr,hg,hb = self.create_histograme()
+            hr,hg,hb = self.histograme()
             nhr,nhg,nhb = np.array(hr,dtype=np.float64),np.array(hg,dtype=np.float64),np.array(hb,dtype=np.float64) 
             nhr /= (self.width*self.height)
             nhg /= (self.width*self.height)
             nhb /= (self.width*self.height)
             return  nhr,nhg,nhb
         elif self.mode == 'L':
-            hgray = self.create_histograme()
+            hgray = self.histograme()
             nhgray = np.array(hgray,dtype=np.float64) / (self.width*self.height)
             return nhgray
     
     def cumulative_normilized_histo(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == 'RGB':
-            nhr,nhg,nhb = self.create_normilized_histograme()
+            nhr,nhg,nhb = self.normilized_histograme()
             cnhr,cnhg,cnhb = np.full(256,0.),np.full(256,0.),np.full(256,0.)
             cnhr[0] = nhr[0]
             cnhg[0] = nhg[0]
@@ -464,7 +488,7 @@ class MyImage:
             return cnhr,cnhg,cnhb
 
         elif self.mode == 'L':
-            nhgray = self.create_normilized_histograme()
+            nhgray = self.normilized_histograme()
             cnhgray = np.full(256,0.)
             cnhgray[0] = nhgray[0]
             for i in range(1,256):
@@ -491,7 +515,7 @@ class MyImage:
         
     def remove_outliers(self,metric:str,threash_hold:int|float):
         """
-        This function compute the mean and median and std then test if each pixel between mean - threshold * std and mean + threashold * std if it is not then it will replace it but either the mean of the median  
+        This function compute the mean and median and std then test if each pixel is between mean - threshold * std and mean + threashold * std if is not then it will replace it buy either the mean of the median  
         """
         metric = metric.upper()
         if threash_hold <= 0:
@@ -605,6 +629,7 @@ class MyImage:
         plt.imshow(img_to_show)
         plt.show()
 
+    # TODO this function will be re-created cause it is not defined correctly
     def show_histogram(self):
         img = Image.new('RGB',(self.width,self.height))
         img.putdata(list(zip(self.r.flatten(),self.g.flatten(),self.b.flatten())))
@@ -636,6 +661,7 @@ class MyImage:
         
         plt.show()
     
+    # TODO this function will be re-created cause it is not defined correctly
     def show_normalized_histogram(self):
         img = Image.new('RGB',(self.width,self.height))
         img.putdata(list(zip(self.r.flatten(),self.g.flatten(),self.b.flatten())))
