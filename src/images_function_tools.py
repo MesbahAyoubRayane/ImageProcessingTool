@@ -1,15 +1,21 @@
 import numpy as np
 from PIL import Image
-from typing import Self
 from matplotlib import pyplot as plt
 
 class MyImage:
-    MODES = ('RGB','L')
-    FILTERS = ('MEAN')
-    DEFAUL_GRAY_SCALE_COEF = (0.299,0.587,0.114)
+    """
+    A class containging all the functions learned in the image processing class:
+    support two types of images 'RGB' an 'L' (gray scale)
+    """
+    MODES = ('RGB','L') 
+    DEFAUL_GRAY_SCALE_COEF = (0.299,0.587,0.114) # this are the deafults values for transforming from rgb to gray scale
 
-    def __init__(self,r:np.ndarray,g:np.ndarray,b:np.ndarray,mode) -> None:
-        mode:str= mode.upper()
+    def __init__(self,r:np.ndarray,g:np.ndarray,b:np.ndarray,mode:str):
+        """
+        r,g,b are numpy matrices the must have the same shape (width*height)
+        mode : 'RGB' or 'L'
+        """
+        mode = mode.upper()
         if mode not in MyImage.MODES:
             raise ValueError(f'Unsupported mode value {mode},mode must be L or RGB')
         self.mode = mode
@@ -20,18 +26,20 @@ class MyImage:
         self.r,self.g,self.b = r.copy().astype(np.uint8),g.copy().astype(np.uint8),b.copy().astype(np.uint8)
 
     @property
-    def width(self):
-        return len(self.r[0])
+    def width(self): return len(self.r[0])
     
     @property
-    def height(self):
-        return len(self.r)
+    def height(self): return len(self.r)
 
     @property
-    def dimensions(self):
-        return self.width,self.height
+    def dimensions(self): return self.width,self.height
 
     def pixels(self):
+        """
+        this function return all the pixels of the image:
+        if mode = rgb  ==> x,y,r,g,b
+        if mode = l ==> x,y,v
+        """
         if self.mode.upper() == 'RGB':
             for x in range(self.width):
                 for y in range(self.height):
@@ -44,6 +52,12 @@ class MyImage:
                     yield x,y,g
 
     def __getitem__(self,indecies:(int,int)) -> tuple[int,int,int]:
+        """
+        used to index the image 
+        P = img[x,y]
+        P == (r,g,b) if mode = RGB
+        P == (v,v,v) v is the gray scale value 
+        """
         x,y = self.__test_indecies__(indecies[0],indecies[1])
         return int(self.r[y,x]),int(self.g[y,x]),int(self.b[y,x])
     
@@ -159,7 +173,7 @@ class MyImage:
 
         return fimg
     
-    def rotate(self,theta:float|int) -> Self:
+    def rotate(self,theta:float|int):
         """ theta must be in degrees """
         X1 = np.arange(len(self.r[0]))
         Y1 = np.arange(len(self.r))
@@ -182,11 +196,36 @@ class MyImage:
         
         return MyImage(r,g,b,self.mode)
     
-    def histo_shift(self,i:int) -> Self:
+    # histigram based operations
+    def histo_translation(self,i:int):
         nr = (np.array(self.r,dtype=np.int32) + i) % 256
         ng = (np.array(self.g,dtype=np.int32) + i) % 256
         nb = (np.array(self.b,dtype=np.int32) + i) % 256
         return MyImage(nr,ng,nb,self.mode)
+    
+    def inverse(self):
+        r = 255 - np.array(self.r)
+        g = 255 - np.array(self.g)
+        b = 255 - np.array(self.b)
+        return MyImage(r,g,b,self.mode) 
+    
+    def expansion_dynamique(self):
+        if self.mode == "RGB":
+            MIN = self.r.flatten().min()
+            MAX = self.r.flatten().max()
+            r = np.array((self.r.flatten().astype(np.float64) - MIN )* (255/(MAX-MIN)),dtype=np.uint8).reshape(self.r.shape)
+            MIN = self.g.flatten().min()
+            MAX = self.g.flatten().max()
+            g = np.array((self.g.flatten().astype(np.float64) - MIN )* (255/(MAX-MIN)),dtype=np.uint8).reshape(self.g.shape)
+            MIN = self.b.flatten().min()
+            MAX = self.b.flatten().max()
+            b = np.array((self.b.flatten().astype(np.float64) - MIN )* (255/(MAX-MIN)),dtype=np.uint8).reshape(self.b.shape)
+            return MyImage(r,g,b,self.mode)
+        elif self.mode == 'L':
+            MIN = self.r.flatten().min()
+            MAX = self.r.flatten().max()
+            gray = np.array((self.r.flatten().astype(np.float64) - MIN )* (255/(MAX-MIN)),dtype=np.uint8).reshape(self.r.shape)
+            return MyImage(gray,gray,gray,self.mode)
 
     # filters
     def gray_scale(self):
@@ -268,7 +307,7 @@ class MyImage:
         return copy_img
 
     # Haitem's Codes:
-        def gaussian_filter(self, size: int, std: float):
+    def gaussian_filter(self, size: int, std: float):
         if isinstance(size, int):
             if size < 2:
                 raise ValueError(f'size must be > 1')
@@ -371,13 +410,7 @@ class MyImage:
 
         return segmented_img
     
-    def negative(self) -> Self:
-        r = 255 - np.array(self.r,dtype=np.int32)
-        g = 255 - np.array(self.g,dtype=np.int32)
-        b = 255 - np.array(self.b,dtype=np.int32)
-        return MyImage(r,g,b,self.mode) 
-    
-    def heat_map(self) -> Self:
+    def heat_map(self):
         # from the top
         delta_r_t = np.zeros(self.r.shape,dtype=np.int32)
         delta_g_t = np.zeros(self.g.shape,dtype=np.int32)
@@ -416,9 +449,90 @@ class MyImage:
         return MyImage(delta_r,delta_g,delta_b,self.mode)
     
 
+    def create_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+        if self.mode == "RGB":
+            hr = np.full((256,),fill_value=0,dtype=np.int32)
+            hg = np.full((256,),fill_value=0,dtype=np.int32)
+            hb = np.full((256,),fill_value=0,dtype=np.int32)
+            for ri,gi,bi in zip(self.r.flatten(),self.g.flatten(),self.b.flatten()):
+                hr[ri] += 1
+                hg[gi] += 1
+                hb[bi] += 1
+            
+            return hr,hg,hb
+
+        elif self.mode == "L":
+            hgray = np.full((256,),fill_value=0,dtype=np.int32)
+            for v in self.r.flatten():
+                hgray[v] += 1
+            return hgray
+    
+    def create_cumulated_histograme(self) ->  np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+        if self.mode == "RGB":
+            hr,hg,hb = self.create_histograme()
+            chr,chg,chb = np.full((256,),dtype=np.int32,fill_value=0),np.full((256,),dtype=np.int32,fill_value=0),np.full((256,),dtype=np.int32,fill_value=0)
+            assert hr.sum() == self.width * self.height
+            assert hg.sum() == self.width * self.height
+            assert hb.sum() == self.width * self.height
+            sum_r = sum_g = sum_b = 0
+            for i in range(256):
+                sum_r += hr[i]
+                sum_g += hg[i]
+                sum_b += hb[i]
+                chr[i] = sum_r
+                chg[i] = sum_g
+                chb[i] = sum_b
+            return chr,chg,chb
+        elif self.mode == 'L':
+            hgray = self.create_histograme()
+            chgray = np.full((256,),dtype=np.int32,fill_value=0)
+            sum_gray = 0
+            for i in range(256):
+                sum_gray += hgray[i]
+                chgray[i] = sum_gray
+            return chgray
+
+    
+    def create_normilized_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+        if self.mode == "RGB":
+            hr,hg,hb = self.create_histograme()
+            nhr,nhg,nhb = np.array(hr,dtype=np.float64),np.array(hg,dtype=np.float64),np.array(hb,dtype=np.float64) 
+            nhr /= (self.width*self.height)
+            nhg /= (self.width*self.height)
+            nhb /= (self.width*self.height)
+            return  nhr,nhg,nhb
+        elif self.mode == 'L':
+            hgray = self.create_histograme()
+            nhgray = np.array(hgray,dtype=np.float64) / (self.width*self.height)
+            return nhgray
+    
+    def create_cumulative_normilized_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+        if self.mode == 'RGB':
+            nhr,nhg,nhb = self.create_normilized_histograme()
+            cnhr,cnhg,cnhb = np.full(256,0.),np.full(256,0.),np.full(256,0.)
+            cnhr[0] = nhr[0]
+            cnhg[0] = nhg[0]
+            cnhb[0] = nhb[0]
+            for i in range(1,256):
+                cnhr[i] = nhr[i] + cnhr[i-1]
+                cnhg[i] = nhg[i] + cnhg[i-1]
+                cnhb[i] = nhb[i] + cnhb[i-1]
+            return cnhr,cnhg,cnhb
+
+        elif self.mode == 'L':
+            nhgray = self.create_normilized_histograme()
+            cnhgray = np.full(256,0.)
+            cnhgray[0] = nhgray[0]
+            for i in range(1,256):
+                cnhgray[i] = nhgray[i] + cnhgray[i-1]
+            return cnhgray
+
     # static functions
     @staticmethod
-    def new(w:int,h:int,mode,defalut_value:tuple[int,int,int]|int) -> Self:
+    def new(w:int,h:int,mode:str):
+        """
+        create a new image having width w and hight h , and initilise the rgb matrices to zero 
+        """
         if mode.upper() == 'RGB':
             r = np.full((h,w),defalut_value[0],dtype=np.uint8)
             g = np.full((h,w),defalut_value[1],dtype=np.uint8)
@@ -427,7 +541,8 @@ class MyImage:
         elif mode.upper() == 'L':
             g = np.full((w,h),defalut_value,dtype=np.uint8)
             return MyImage(g,g,g,mode=mode)
-        else:
+        mode = mode.upper()
+        if mode not in MyImage.MODES:
             raise ValueError(f'the mode {mode} is not provided')
 
     @staticmethod
@@ -475,7 +590,7 @@ class MyImage:
         plt.imshow(img_to_show)
         plt.show()
 
-    def histogram(self):
+    def show_histogram(self):
         img = Image.new('RGB',(self.width,self.height))
         img.putdata(list(zip(self.r.flatten(),self.g.flatten(),self.b.flatten())))
         
@@ -506,7 +621,7 @@ class MyImage:
         
         plt.show()
     
-    def normalized_histogram(self):
+    def show_normalized_histogram(self):
         img = Image.new('RGB',(self.width,self.height))
         img.putdata(list(zip(self.r.flatten(),self.g.flatten(),self.b.flatten())))
 
@@ -593,7 +708,7 @@ class MyImage:
 
         plt.show()
 
-    def show_images(images:list[Self]):
+    def show_images(images:list):
         DEFAULT_IMAGES_PER_ROW = 3
         number_of_rows = len(images)//DEFAULT_IMAGES_PER_ROW + 1 if len(images) % DEFAULT_IMAGES_PER_ROW != 0 else len(images)
         

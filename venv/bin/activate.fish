@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV "/home/mar/Desktop/Python WorkSpace/Image Processing/venv"
+set -gx VIRTUAL_ENV "/home/mesbah/Desktop/PythonProjects/ImageProcessingTool/venv"
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/bin" $PATH
