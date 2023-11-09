@@ -43,7 +43,7 @@ class MyImage:
         if self.mode.upper() == 'RGB':
             for x in range(self.width):
                 for y in range(self.height):
-                    yield y,x,self.r[y,x],self.g[y,x],self.b[y,x]
+                    yield x,y,self.r[y,x],self.g[y,x],self.b[y,x]
         elif self.mode.upper() == 'L':
             gray_coef = MyImage.DEFAUL_GRAY_SCALE_COEF
             for x in range(self.width):
@@ -173,6 +173,7 @@ class MyImage:
 
         return fimg
     
+    # TODO this function is not working properly , when rotating there is a lot of artifacte showing in the image
     def rotate(self,theta:float|int):
         """ theta must be in degrees """
         X1 = np.arange(len(self.r[0]))
@@ -203,15 +204,16 @@ class MyImage:
         nb = (np.array(self.b,dtype=np.int32) + i) % 256
         return MyImage(nr,ng,nb,self.mode)
     
-    def inverse(self):
+    def histo_inverse(self):
         r = 255 - np.array(self.r)
         g = 255 - np.array(self.g)
         b = 255 - np.array(self.b)
         return MyImage(r,g,b,self.mode) 
     
-    def expansion_dynamique(self):
+    def histo_expansion_dynamique(self):
         """
         Note before using this function you need to remove outliers because then can change the results dramaticly
+        This function is just a simple normalization function between 0 and 255 , thus outliers have an important effect on the function
         """
         if self.mode == "RGB":
             MIN = self.r.flatten().min()
@@ -229,6 +231,20 @@ class MyImage:
             MAX = self.r.flatten().max()
             gray = np.array((self.r.flatten().astype(np.float64) - MIN )* (255/(MAX-MIN)),dtype=np.uint8).reshape(self.r.shape)
             return MyImage(gray,gray,gray,self.mode)
+
+    def histo_equalisation(self):
+        if self.mode == "RGB":
+            cdf_r,cdf_g,cdf_b = self.cumulative_normilized_histo()
+            cp_img = self.copy()
+            for x,y,r,g,b in self.pixels():
+                cp_img[x,y] = (int(cdf_r[r]*255),int(cdf_g[g]*255),int(cdf_b[b]*255))
+        elif self.mode == 'L':
+            cdf:np.ndarray = self.cumulative_normilized_histo()
+            cp_img = self.copy()
+            for x,y,v in cp_img.pixels():
+                cp_img[x,y] = int(255 * cdf[int(v)])
+        return cp_img
+
 
     # filters
     def gray_scale(self):
@@ -380,6 +396,22 @@ class MyImage:
 
         return segmented_img
     
+    def create_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+        if self.mode == "L":
+            h = np.full((256,),fill_value=0)
+            for v in self.r.flatten():
+                h[v] += 1
+            h = h.reshape(self.r.shape)
+            return h
+        
+        elif self.mode == 'RGB':
+            hr,hg,hb = np.full((256,),fill_value=0),np.full((256,),fill_value=0),np.full((256,),fill_value=0) 
+            for _,_,r,g,b in self.pixels():
+                hr[r] += 1
+                hg[g] += 1
+                hb[b] += 1
+            return hr,hg,hb
+    
     def create_cumulated_histograme(self) ->  np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "RGB":
             hr,hg,hb = self.create_histograme()
@@ -405,7 +437,6 @@ class MyImage:
                 chgray[i] = sum_gray
             return chgray
 
-    
     def create_normilized_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "RGB":
             hr,hg,hb = self.create_histograme()
@@ -419,7 +450,7 @@ class MyImage:
             nhgray = np.array(hgray,dtype=np.float64) / (self.width*self.height)
             return nhgray
     
-    def create_cumulative_normilized_histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
+    def cumulative_normilized_histo(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == 'RGB':
             nhr,nhg,nhb = self.create_normilized_histograme()
             cnhr,cnhg,cnhb = np.full(256,0.),np.full(256,0.),np.full(256,0.)
@@ -440,19 +471,19 @@ class MyImage:
                 cnhgray[i] = nhgray[i] + cnhgray[i-1]
             return cnhgray
     
-    def compute_mean(self) -> tuple[float,float,float]|float:
+    def mean(self) -> tuple[float,float,float]|float:
         if self.mode == "RGB":
             return self.r.flatten().mean(),self.g.flatten().mean(),self.b.flatten().mean()
         elif self.mode == "L":
             return self.r.flatten().mean()
         
-    def compute_std(self) -> tuple[float,float,float]|float:
+    def std(self) -> tuple[float,float,float]|float:
         if self.mode == "RGB":
             return self.r.flatten().std(),self.g.flatten().std(),self.b.flatten().std()
         elif self.mode == "L":
             return self.r.flatten().std()
     
-    def compute_median(self) -> tuple[float,float,float]|int:
+    def median(self) -> tuple[float,float,float]|int:
         if self.mode == "RGB":
             return np.median(self.r.flatten()),np.median(self.g.flatten()),np.median(self.b.flatten())
         elif self.mode == "L":
@@ -470,9 +501,9 @@ class MyImage:
             raise ValueError(f"The provided value for metric {metric} is not correct , choose from {('MEAN','MEDIAN')}")
         
         if self.mode == "L":
-            mean = self.compute_mean()
-            median = self.compute_median()
-            std = self.compute_std()
+            mean = self.mean()
+            median = self.median()
+            std = self.std()
             upper_bound = mean + threash_hold * std
             lower_bound = mean - threash_hold * std
             nv = np.full(self.r.size,0,dtype=np.uint8)
@@ -486,9 +517,9 @@ class MyImage:
             return MyImage(nv,nv,nv,"L")
         
         elif self.mode =='RGB':
-            mean_r,mean_g,mean_b = self.compute_mean()
-            median_r,median_g,median_b = self.compute_median()
-            std_r,std_g,std_b = self.compute_std()
+            mean_r,mean_g,mean_b = self.mean()
+            median_r,median_g,median_b = self.median()
+            std_r,std_g,std_b = self.std()
             replcament_r,replcament_g,replcament_b = (mean_r,mean_g,mean_b) if metric =="MEAN" else (median_r,median_g,median_b)
             
             lower_bound_r,lower_bound_g,lower_bound_b = mean_r - threash_hold * std_r,mean_g - threash_hold * std_g,mean_b - threash_hold * std_b
@@ -516,7 +547,6 @@ class MyImage:
 
         else:
             raise Exception(f"mode {self.mode} is not supported")
-
 
     # static functions
     @staticmethod
