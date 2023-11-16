@@ -306,7 +306,7 @@ class MyImage:
         
         copy_img = self.copy()
         conv_matrix = np.full((size,size),1/(size**2))
-        
+
         for x in range(size//2,self.width-size//2):
             for y in range(size//2,self.height-size//2):
                 r = np.array(self.r[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)

@@ -1,4 +1,6 @@
-#!/home/mesbah/Desktop/PythonProjects/ImageProcessingTool/venv/bin/python3
+#!/bin/sh
+'''exec' "/home/mesbah-ayoub-rayane/Desktop/python workspace/ImageProcessingTool/venv/bin/python3" "$0" "$@"
+' '''
 # -*- coding: utf-8 -*-
 import re
 import sys
