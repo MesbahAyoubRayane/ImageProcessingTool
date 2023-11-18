@@ -73,6 +73,8 @@ class MyImage:
             self.r[y,x],self.g[y,x],self.b[y,x] = r,g,b
         
         elif self.mode.upper() == 'L':
+            if isinstance(value,tuple):
+                value = value[0]
             if not isinstance(value,int):
                 raise ValueError(f"the provided value is not an integer v={v}")
             if not 0<=value<256:
@@ -135,57 +137,12 @@ class MyImage:
                 img[x+p[0],y+p[1]] = v if self.mode == 'RGB' else v[0]
 
 
-        return img
-
-    def rotate_90_degrees(self,reverse=False):
-        """
-            This method rotate the image and return a new MyImage,if reverse=False it rotate in the clock wise direction
-        """
-        tmp = np.zeros(self.width * self.height,dtype=np.uint8).reshape((self.width,self.height))
-        rimg = MyImage(tmp,tmp,tmp,mode=self.mode)
-        if not reverse:
-            for x in range(self.width):
-                for y in range(self.height):
-                    rimg[self.height - y - 1,self.width - x - 1] = self[x,y]
-        else:
-            for x in range(self.width):
-                for y in range(self.height):
-                    rimg[y,self.width - x - 1] = self[x,y]
-        return rimg
-    
-    def rotate_90_degrees_simd(self,reverse=False):
-        """simd function are optimized using numpy vectorial operations"""
-        if not reverse:
-            r = np.array([self.r[:,i][::-1] for i in range(self.width)])
-            g = np.array([self.g[:,i][::-1] for i in range(self.width)])
-            b = np.array([self.b[:,i][::-1] for i in range(self.width)])
-        else:
-            r = np.array([self.r[:,i] for i in range(self.width)])
-            g = np.array([self.g[:,i] for i in range(self.width)])
-            b = np.array([self.b[:,i] for i in range(self.width)])
-            
-        return MyImage(r,g,b,self.mode)
+        return img    
     
     def flip(self,axe:str):
-        axe = axe.lower()
-        if axe not in ('h','v'):raise Exception("axe must be v or h")
-        tmp =np.zeros(self.width*self.height).reshape(self.r.shape)
-        fimg = MyImage(tmp,tmp,tmp,self.mode)
-        
-        if axe == 'v':
-            for x in range(self.width):
-                for y in range(self.height):  
-                    fimg[self.width - x - 1,y] = self[x,y]
-        elif axe == 'h':
-            for x in range(self.width):
-                for y in range(self.height):  
-                    fimg[x, self.height - y - 1] = self[x,y]
-        
-        return fimg
-    
-    def flip_simd(self,axe:str):
         """
         flip_simd : as the name suggestes , it allow verticale and horizantal fliping of the image , it  uses the numpy array simd operation to accelerate the process  
+        axe : 'h' or 'v'
         """
         axe = axe.lower()
         if axe not in ('h','v'):raise Exception("axe must be v or h")
@@ -202,7 +159,7 @@ class MyImage:
         return fimg
     
     # TODO this function is not working properly , when rotating there is a lot of artifacte showing in the image
-    def rotate(self,theta:float|int,interpolation_method:str):
+    def rotate(self,theta:float|int):
         rotated_img = MyImage.new(self.width,self.height,self.mode)
         W,H = rotated_img.width,rotated_img.height
         theta = theta * np.pi/180
@@ -210,21 +167,39 @@ class MyImage:
             [np.cos(theta),-np.sin(theta)],
             [np.sin(theta),np.cos(theta)]]
         ).transpose()
-
-        for x in range(-W//2+1,W//2):
-            for y in range(-H//2+1,H//2):
-                u,v = (rotation_matrix_t @ np.array([x,y])).tolist()
-                u,v = u+W//2,v+H//2
+        
+        for u in range(W):
+            for v in range(H):
+                x,y = (rotation_matrix_t @ np.array([u-W//2,v-H//2])).tolist()
+                x,y = x + W//2 , y + H//2
                 try:
-                    x = x + W//2
-                    y = y + H//2
-                    rotated_img[x,y] = self[int(u),int(v)]
-                except Exception:
+                    rotated_img[u,v] = self[int(x),int(y)]
+                except Exception as _:
                     continue
         return rotated_img
+
+    def rescale(self,x_scaling_factor:float,y_scaling_factor:float):
+        if x_scaling_factor <= 0 or y_scaling_factor <= 0:
+            raise ValueError("The selected factors are incorrect")
         
-    
-    # histigram based operations
+        scaling_matrix  = np.array([
+            [x_scaling_factor,0],
+            [0,y_scaling_factor]
+        ])
+
+        NW = int(self.width * x_scaling_factor)
+        NH = int(self.height * y_scaling_factor)
+
+        scaled_img = MyImage.new(NW,NH,self.mode)
+
+        for x in range(NW):
+            for y in range(NH):
+                try:
+                    scaled_img[x,y] = self[int(x/x_scaling_factor),int(y/y_scaling_factor)]
+                except Exception:
+                    continue
+        return scaled_img
+    # histogram based operations
     def histo_translation(self,i:int):
         nr = (np.array(self.r,dtype=np.int32) + i) % 256
         ng = (np.array(self.g,dtype=np.int32) + i) % 256
@@ -260,6 +235,7 @@ class MyImage:
             return MyImage(gray,gray,gray,self.mode)
 
     def histo_equalisation(self):
+        """ use the cumulative histograme to improve contraste"""
         if self.mode == "RGB":
             cdf_r,cdf_g,cdf_b = self.cumulative_normilized_histo()
             cp_img = self.copy()
@@ -273,6 +249,7 @@ class MyImage:
         return cp_img
 
     def histo_matching(self,model):
+        """use an image as a model for another image"""
         if isinstance(model,MyImage):
             if self.mode != model.mode:
                 raise ValueError("The selected image model doesn't have the samel mode as the modeled image")
@@ -309,18 +286,6 @@ class MyImage:
         Gray = np.array((R + G + B) / sum(coef),dtype=np.int8)
         return MyImage(Gray,Gray,Gray,'L')
 
-    def red_scale(self):
-        z = np.zeros(self.r.shape)
-        return MyImage(self.r,z,z,"RGB")
-    
-    def blue_scale(self):
-        z = np.zeros(self.r.shape)
-        return MyImage(z,z,self.b,"RGB")
-    
-    def green_scale(self):
-        z = np.zeros(self.r.shape)
-        return MyImage(z,self.g,z,"RGB")
-
     def mean_filter(self,size:int):
         if isinstance(size,int):
             if size < 2:
@@ -335,11 +300,15 @@ class MyImage:
         copy_img = self.copy()
         conv_matrix = np.full((size,size),1/(size**2))
 
-        for x in range(size//2,self.width-size//2):
-            for y in range(size//2,self.height-size//2):
-                r = np.array(self.r[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
-                g = np.array(self.g[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
-                b = np.array(self.b[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+        r_pad = np.pad(self.r,pad_width=size//2,mode='reflect')
+        g_pad = np.pad(self.g,pad_width=size//2,mode='reflect')
+        b_pad = np.pad(self.b,pad_width=size//2,mode='reflect')
+
+        for x in range(size//2,self.width):
+            for y in range(size//2,self.height):
+                r = np.array(r_pad[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                g = np.array(g_pad[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
+                b = np.array(b_pad[y-size//2:y+size//2+1 , x-size//2:x+size//2+1],dtype=np.int32)
                 copy_img.r[y,x] = ((conv_matrix * r).sum())
                 copy_img.g[y,x] = ((conv_matrix * g).sum())
                 copy_img.b[y,x] = ((conv_matrix * b).sum())
@@ -391,7 +360,8 @@ class MyImage:
                 copy_img.b[y, x] = int(np.clip(b_filtered, 0, 255))
 
         return copy_img
-
+    
+    # segmentation algorithms
     def color_segmt(self, threshold: int):
         kernel1 = np.full(shape=(3, 3), fill_value=0)
         kernel1[:, 0] = -1
@@ -449,6 +419,7 @@ class MyImage:
 
         return segmented_img
     
+    # histogrames
     def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "L":
             h = np.full((256,),fill_value=0)
@@ -523,6 +494,7 @@ class MyImage:
                 cnhgray[i] = nhgray[i] + cnhgray[i-1]
             return cnhgray
     
+    # statistical constants
     def mean(self) -> tuple[float,float,float]|float:
         if self.mode == "RGB":
             return self.r.flatten().mean(),self.g.flatten().mean(),self.b.flatten().mean()

@@ -14,11 +14,16 @@ def test_create_histograme_functions(img:MyImage):
     plt.show()
 
 def test_histograme_based_operations(img:MyImage):
+    img = img.gray_scale().remove_outliers("mean",3).histo_translation(50)
+    x = img.histo_expansion_dynamique()
+    y = img.histo_equalisation()
+    MyImage.show_images([x,y,img])
+    return 
     model = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
     model = model.gray_scale()
     img = img.gray_scale()
     MyImage.show_images([img,img.histo_matching(model.cumulative_normilized_histo()),model])
-    return 
+    return
     MyImage.show_images([img.histo_equalisation(),img])
     return
     x = img.gray_scale().remove_outliers("mean",3).histo_expansion_dynamique()
@@ -29,12 +34,19 @@ def test_histograme_based_operations(img:MyImage):
     img.gray_scale().histo_inverse().show_image()
 
 def test_geometric_operations(img:MyImage):
+    img.rescale(0.5,0.5).rescale(2,2).show_image()
+    return
+    img.gray_scale().rescale(2,2).show_image()
+    return
     img.gray_scale().paste(1000,1000,(100,100)).translation((100,200)).show_image()
+    img.gray_scale().paste(1000,1000,(100,100)).translation((300,200)).show_image()
+    
 
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
+    array = np.ones((5,5))
+    #img.mean_filter(11).show_image()
     #test_geometric_operations(img)
-    img.rotate(60,"").show_image()
     #img.rotate(30,"","ANTI_CLOCK_WISE").show_image()
     #test_histograme_based_operations(img)
     #test_create_histograme_functions(img)
