@@ -64,7 +64,7 @@ class MyImage:
     def __setitem__(self,indecies:(int,int),value:tuple[int,int,int]|int):
         x,y = self.__test_indecies__(indecies[0],indecies[1])
         if self.mode.upper() == "RGB":
-            r,g,b = value    
+            r,g,b = int(value[0]),int(value[1]),int(value[2]) 
             for v in r,g,b:
                 if not isinstance(v,int):
                     raise ValueError(f"the provided value is not an integer v={v}")
@@ -85,7 +85,7 @@ class MyImage:
         if not 0<=y<self.height:
             raise Exception(f"y value {y}, is greater than the height of the image {self.height}")
         return int(x),int(y)
-    
+
     def copy(self):
         # creat a deep copy of the image
         return MyImage(self.r,self.g,self.b,self.mode)
@@ -107,6 +107,35 @@ class MyImage:
                 if 0<=_x<self.width and 0<=_y<self.height:
                     rimg[_x,_y] = self[x+_x,y+_y]
         return rimg 
+
+    # Geometric transformation
+    def translation(self,vec:tuple[float|int,float|int]):
+        """
+        translate the image by a vector (x,y) -> (x+u,y+v) 
+        """
+        cpy = MyImage.new(self.width,self.height,self.mode)
+        for x,y,*v in self.pixels():
+            x_ = x + vec[0]
+            y_ =y + vec[1]
+            if 0<=x_<self.width and 0<= y_ < self.height:
+                cpy[x_,y_] = v if self.mode == "RGB" else v[0]
+        return cpy
+    
+    def paste(self,new_width:int,new_height:int,p:tuple[int,int]):
+        """
+        This function allow you to paste another function on the new image, the new image must be of a larger size
+        for it to hold the old image 
+        """
+        if self.width > new_width or self.height > new_height:
+            raise ValueError('The image is bigger than the canvas')
+        img = MyImage.new(new_width,new_height,self.mode)
+
+        for x,y,*v in self.pixels():
+            if x+p[0] < img.width and y + p[1] < img.height:
+                img[x+p[0],y+p[1]] = v if self.mode == 'RGB' else v[0]
+
+
+        return img
 
     def rotate_90_degrees(self,reverse=False):
         """
@@ -173,28 +202,27 @@ class MyImage:
         return fimg
     
     # TODO this function is not working properly , when rotating there is a lot of artifacte showing in the image
-    def rotate(self,theta:float|int):
-        """ theta must be in degrees """
-        X1 = np.arange(len(self.r[0]))
-        Y1 = np.arange(len(self.r))
-        X0,Y0 = len(self.r[0])/2,len(self.r)/2
-        
-        r = np.zeros(self.r.shape)
-        g = np.zeros(self.g.shape)
-        b = np.zeros(self.b.shape)
+    def rotate(self,theta:float|int,interpolation_method:str):
+        rotated_img = MyImage.new(self.width,self.height,self.mode)
+        W,H = rotated_img.width,rotated_img.height
+        theta = theta * np.pi/180
+        rotation_matrix_t = np.array([
+            [np.cos(theta),-np.sin(theta)],
+            [np.sin(theta),np.cos(theta)]]
+        ).transpose()
 
-        theta = (theta * 2 * np.pi)/360
-        SIN_THETA,COS_THETA = np.sin(theta),np.cos(theta)
-        for x in X1:
-            for y in Y1:
-                x2 = int((x - X0)*COS_THETA - (y - Y0)*SIN_THETA + X0)
-                y2 = int(SIN_THETA * (x - X0) + COS_THETA*(y - Y0) + Y0)
-                if not 0<=x2<len(self.r[0]) or not  0<=y2<len(self.r): continue
-                r[y2,x2] = self.r[y,x]
-                g[y2,x2] = self.g[y,x]
-                b[y2,x2] = self.b[y,x]
+        for x in range(-W//2+1,W//2):
+            for y in range(-H//2+1,H//2):
+                u,v = (rotation_matrix_t @ np.array([x,y])).tolist()
+                u,v = u+W//2,v+H//2
+                try:
+                    x = x + W//2
+                    y = y + H//2
+                    rotated_img[x,y] = self[int(u),int(v)]
+                except Exception:
+                    continue
+        return rotated_img
         
-        return MyImage(r,g,b,self.mode)
     
     # histigram based operations
     def histo_translation(self,i:int):

@@ -28,8 +28,14 @@ def test_histograme_based_operations(img:MyImage):
     img.histo_inverse().show_image()
     img.gray_scale().histo_inverse().show_image()
 
+def test_geometric_operations(img:MyImage):
+    img.gray_scale().paste(1000,1000,(100,100)).translation((100,200)).show_image()
+
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    test_histograme_based_operations(img)
+    #test_geometric_operations(img)
+    img.rotate(60,"").show_image()
+    #img.rotate(30,"","ANTI_CLOCK_WISE").show_image()
+    #test_histograme_based_operations(img)
     #test_create_histograme_functions(img)
     #img.gaussian_filter(11,3).histo_translation(20).show_image()
