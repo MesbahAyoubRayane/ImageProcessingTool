@@ -419,6 +419,51 @@ class MyImage:
 
         return segmented_img
     
+    # clustering algorithms
+    # TODO implement the kmean for the gary images
+    def kmean(self,k:int):
+        def mean(items:list[tuple[int,int,int]]) -> (int,int,int):
+            sum_r = sum_g = sum_b = 0
+            X = Y = 0
+            for x in items:
+                x,y,r,g,b = x
+                X += x
+                Y += y
+                sum_r += r
+                sum_g += g
+                sum_b += b
+            N = len(items)
+            return (x,y,sum_r//N,sum_g//N,sum_b//N)
+        if k <= 1:
+            raise ValueError("k must be > 1")
+        clusters = {(
+            np.random.randint(0,self.width-1),
+            np.random.randint(0,self.height - 1),
+            np.random.randint(0,255),
+            np.random.randint(0,255),
+            np.random.randint(0,255)):[] for _ in range(k)}
+        jumped = True
+        while jumped:
+            jumped = False
+            for x,y,r,g,b in self.pixels():
+                c = min(clusters.keys(),
+                    key=lambda center:
+                        ((np.array(list(center)[2:]) - np.array([r,g,b]))**2).sum())
+                if (x,y,r,g,b) not in clusters[c]:
+                    for _,l in clusters.items():
+                        while (x,y,r,g,b) in l:
+                            l.remove((x,y,r,g,b))
+                    clusters[c].append((x,y,r,g,b))
+                    jumped = True
+            # recomputing the centers
+            new_clusters = {mean(items) if len(items) else c:items.copy() 
+                for c,items in clusters.items()}
+            clusters = new_clusters
+        return list(clusters.values())
+
+    def objects_segmentation(self) -> list:
+        ...
+
     # histogrames
     def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "L":
@@ -567,7 +612,7 @@ class MyImage:
                 else:
                     nv_b[i] = replcament_b
             
-            return MyImage(nv_r.reshape(self.r.shape),nv_g.reshape(self.g.shape),nv_b.reshape(self.b.shape))
+            return MyImage(nv_r.reshape(self.r.shape),nv_g.reshape(self.g.shape),nv_b.reshape(self.b.shape),self.mode)
 
         else:
             raise Exception(f"mode {self.mode} is not supported")
@@ -583,7 +628,15 @@ class MyImage:
             raise ValueError(f'the mode {mode} is not provided')   
         v = np.full((h,w),0,dtype=np.uint8)
         return MyImage(v,v,v,mode)
-
+    @staticmethod
+    def new_from_pixels(pixels:list[tuple],mode:str,width:int,height:int):
+        if len(pixels) == 0:
+            raise ValueError("no pixels were given")
+        img = MyImage.new(width,height,mode)
+        for item in pixels:
+            x,y,*v = item
+            img[x,y] = v
+        return img
     @staticmethod
     def open_image_as_rgb_matrices(path:str):
         """
@@ -760,3 +813,4 @@ class MyImage:
             axe.imshow(pil_img)
 
         plt.show()
+    

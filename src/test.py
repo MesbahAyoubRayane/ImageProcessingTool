@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from images_function_tools import MyImage
 from tkinter import filedialog
-
+import json
 
 def test_create_histograme_functions(img:MyImage):
     img = img.gray_scale()
@@ -40,11 +40,21 @@ def test_geometric_operations(img:MyImage):
     return
     img.gray_scale().paste(1000,1000,(100,100)).translation((100,200)).show_image()
     img.gray_scale().paste(1000,1000,(100,100)).translation((300,200)).show_image()
-    
 
+def test_clustering(img:MyImage):
+    K = 3
+    img = img.rescale(1,1)
+    img.show_image()
+    cluters = img.kmean(K)
+    images = []
+    for i in range(len(cluters)):
+        if len(cluters[i]) == 0:continue
+        images.append(MyImage.new_from_pixels(cluters[i],img.mode,img.width,img.height))
+    MyImage.show_images(images)
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    array = np.ones((5,5))
+    test_clustering(img)
+    #array = np.ones((5,5))
     #img.mean_filter(11).show_image()
     #test_geometric_operations(img)
     #img.rotate(30,"","ANTI_CLOCK_WISE").show_image()
