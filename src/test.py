@@ -3,6 +3,7 @@ import numpy as np
 from images_function_tools import MyImage
 from tkinter import filedialog
 import json
+import time
 
 def test_create_histograme_functions(img:MyImage):
     img = img.gray_scale()
@@ -52,9 +53,29 @@ def test_clustering(img:MyImage):
         images.append(MyImage.new_from_pixels(cluters[i],img.mode,img.width,img.height))
     MyImage.show_images(images)
 if __name__ =="__main__":
-    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
+    
+    """img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
+    img = img.rescale(2,2)
+    start = time.time()
+    imrpvedimg = img.rotate_imp(30)
+    end = time.time()
+    improved = end - start
+    print(f"improved {improved}")
+    start = time.time()
+    rotateimg = img.rotate(30)
+    end = time.time()
+    old = end - start
+    print(f"old {old}")
+
+    if old < improved:
+        print(f"old is better than imrpved {improved - old}")
+    else:
+        print(f"improved is better than old {old - improved }")
+    MyImage.show_images([imrpvedimg,rotateimg])"""
+    #img.rescale(0.1,0.1).rescale(10,10).save_image("test.png")
+    #img.rotate(30).show_image()
     #img.color_segmt(70).show_image()
-    test_clustering(img)
+    #test_clustering(img)
     #array = np.ones((5,5))
     #img.mean_filter(11).show_image()
     #test_geometric_operations(img)

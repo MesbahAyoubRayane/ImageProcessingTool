@@ -42,14 +42,11 @@ class MyImage:
         """
         if self.mode.upper() == 'RGB':
             for x in range(self.width):
-                for y in range(self.height):
-                    yield x,y,self.r[y,x],self.g[y,x],self.b[y,x]
+                for y in range(self.height): yield x,y,self.r[y,x],self.g[y,x],self.b[y,x]
+        
         elif self.mode.upper() == 'L':
-            gray_coef = MyImage.DEFAUL_GRAY_SCALE_COEF
             for x in range(self.width):
-                for y in range(self.height):
-                    g = int((gray_coef[0] * self.r[y,x] + gray_coef[1]*self.g[y,x] + gray_coef[2] * self.b[y,x])/sum(gray_coef))
-                    yield x,y,g
+                for y in range(self.height): yield x,y,self.r[y,x]
 
     def __getitem__(self,indecies:(int,int)) -> tuple[int,int,int]:
         """
@@ -135,18 +132,16 @@ class MyImage:
         for x,y,*v in self.pixels():
             if x+p[0] < img.width and y + p[1] < img.height:
                 img[x+p[0],y+p[1]] = v if self.mode == 'RGB' else v[0]
-
-
+            
         return img    
     
-    def flip(self,axe:str):
+    def reflecte(self,axe:str):
         """
-        flip_simd : as the name suggestes , it allow verticale and horizantal fliping of the image , it  uses the numpy array simd operation to accelerate the process  
-        axe : 'h' or 'v'
+        mirrore the image on the horizantal or vertical axe
+        axe : ['v','h']
         """
         axe = axe.lower()
         if axe not in ('h','v'):raise Exception("axe must be v or h")
-        tmp =np.zeros(self.width*self.height).reshape(self.r.shape)
         
         if axe == 'v':
             fimg = MyImage(
@@ -158,35 +153,37 @@ class MyImage:
 
         return fimg
     
-    # TODO this function is not working properly , when rotating there is a lot of artifacte showing in the image
-    def rotate(self,theta:float|int):
+    def rotate(self,theta:float):
         rotated_img = MyImage.new(self.width,self.height,self.mode)
         W,H = rotated_img.width,rotated_img.height
         theta = theta * np.pi/180
+        theta *= -1
+        COS ,SIN = np.cos(theta),np.sin(theta)
         rotation_matrix_t = np.array([
-            [np.cos(theta),-np.sin(theta)],
-            [np.sin(theta),np.cos(theta)]]
+            [COS,-SIN],
+            [SIN,COS]]
         ).transpose()
+
+        U_V = np.array([[i,j] for i in range(W) for j in range(H)]).transpose()
+        U_V_MINUS_CENTER = U_V - np.array([[W//2]*H*W,[H//2]*H*W])
+        X_Y = (rotation_matrix_t @ U_V_MINUS_CENTER) + np.array([[W//2]*H*W,[H//2]*H*W])
         
-        for u in range(W):
-            for v in range(H):
-                x,y = (rotation_matrix_t @ np.array([u-W//2,v-H//2])).tolist()
-                x,y = x + W//2 , y + H//2
-                try:
-                    rotated_img[u,v] = self[int(x),int(y)]
-                except Exception as _:
-                    continue
-        return rotated_img
+        U_V = U_V.transpose()
+        X_Y = X_Y.transpose()
+
+        for i in range(W*H):
+            u,v = U_V[i].tolist()
+            x,y = X_Y[i].tolist()
+            try:
+                rotated_img[u,v] = self[x,y]
+            except Exception:
+                continue
+        return rotated_img 
 
     def rescale(self,x_scaling_factor:float,y_scaling_factor:float):
         if x_scaling_factor <= 0 or y_scaling_factor <= 0:
             raise ValueError("The selected factors are incorrect")
         
-        scaling_matrix  = np.array([
-            [x_scaling_factor,0],
-            [0,y_scaling_factor]
-        ])
-
         NW = int(self.width * x_scaling_factor)
         NH = int(self.height * y_scaling_factor)
 
@@ -662,20 +659,19 @@ class MyImage:
 
         return MyImage(R,G,B,'RGB')
     
-    @staticmethod
-    def save_image(img,path:str):
-        img:MyImage = img
-        img_to_save = Image.new(img.mode,img.dimensions)
+    def save_image(self,path:str):
+        self:MyImage = self
+        img_to_save = Image.new(self.mode,self.dimensions)
         
-        if img.mode == 'L':
-            for x in range(img.width):
-                for y in range(img.height):
-                    v = int(sum(img[x,y])//3)
+        if self.mode == 'L':
+            for x in range(self.width):
+                for y in range(self.height):
+                    v = int(sum(self[x,y])//3)
                     img_to_save.putpixel((x,y),v)
-        elif img.mode == 'RGB':
-            for x in range(img.width):
-                for y in range(img.height):
-                    img_to_save.putpixel((x,y),img[x,y])
+        elif self.mode == 'RGB':
+            for x in range(self.width):
+                for y in range(self.height):
+                    img_to_save.putpixel((x,y),self[x,y])
 
         
         img_to_save.save(path)
@@ -820,4 +816,3 @@ class MyImage:
             axe.imshow(pil_img)
 
         plt.show()
-    
