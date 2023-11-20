@@ -43,9 +43,9 @@ def test_geometric_operations(img:MyImage):
 
 def test_clustering(img:MyImage):
     K = 3
-    img = img.rescale(1,1)
+    img = img.rescale(0.25,0.25)
     img.show_image()
-    cluters = img.kmean(K)
+    cluters = img.kmean(K,3)
     images = []
     for i in range(len(cluters)):
         if len(cluters[i]) == 0:continue
@@ -53,6 +53,7 @@ def test_clustering(img:MyImage):
     MyImage.show_images(images)
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
+    #img.color_segmt(70).show_image()
     test_clustering(img)
     #array = np.ones((5,5))
     #img.mean_filter(11).show_image()

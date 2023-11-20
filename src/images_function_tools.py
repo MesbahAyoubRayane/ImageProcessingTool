@@ -199,6 +199,11 @@ class MyImage:
                 except Exception:
                     continue
         return scaled_img
+    
+    def resolution_underscaling(self,factor:int):
+        # continfication
+        raise NotImplementedError()
+
     # histogram based operations
     def histo_translation(self,i:int):
         nr = (np.array(self.r,dtype=np.int32) + i) % 256
@@ -421,7 +426,7 @@ class MyImage:
     
     # clustering algorithms
     # TODO implement the kmean for the gary images
-    def kmean(self,k:int):
+    def kmean(self,k:int,iterations:int=100):
         def mean(items:list[tuple[int,int,int]]) -> (int,int,int):
             sum_r = sum_g = sum_b = 0
             X = Y = 0
@@ -433,9 +438,8 @@ class MyImage:
                 sum_g += g
                 sum_b += b
             N = len(items)
-            return (x,y,sum_r//N,sum_g//N,sum_b//N)
-        if k <= 1:
-            raise ValueError("k must be > 1")
+            return (X//N,Y//N,sum_r//N,sum_g//N,sum_b//N)
+        if k <= 1: raise ValueError("k must be > 1")
         clusters = {(
             np.random.randint(0,self.width-1),
             np.random.randint(0,self.height - 1),
@@ -444,11 +448,12 @@ class MyImage:
             np.random.randint(0,255)):[] for _ in range(k)}
         jumped = True
         while jumped:
+            print(iterations)
             jumped = False
             for x,y,r,g,b in self.pixels():
                 c = min(clusters.keys(),
                     key=lambda center:
-                        ((np.array(list(center)[2:]) - np.array([r,g,b]))**2).sum())
+                        np.sqrt(((np.array(list(center)[2:]) - np.array([r,g,b]))**2).sum()))
                 if (x,y,r,g,b) not in clusters[c]:
                     for _,l in clusters.items():
                         while (x,y,r,g,b) in l:
@@ -459,6 +464,8 @@ class MyImage:
             new_clusters = {mean(items) if len(items) else c:items.copy() 
                 for c,items in clusters.items()}
             clusters = new_clusters
+            if iterations == 0:break
+            iterations -= 1
         return list(clusters.values())
 
     def objects_segmentation(self) -> list:
