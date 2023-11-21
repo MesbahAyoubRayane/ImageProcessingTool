@@ -53,7 +53,8 @@ def test_clustering(img:MyImage):
         images.append(MyImage.new_from_pixels(cluters[i],img.mode,img.width,img.height))
     MyImage.show_images(images)
 if __name__ =="__main__":
-    
+    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
+    test_histograme_based_operations(img)
     """img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
     img = img.rescale(2,2)
     start = time.time()
