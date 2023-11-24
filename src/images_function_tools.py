@@ -70,7 +70,7 @@ class MyImage:
             self.r[y,x],self.g[y,x],self.b[y,x] = r,g,b
         
         elif self.mode.upper() == 'L':
-            if isinstance(value,tuple):
+            if isinstance(value,tuple) or isinstance(value,list):
                 value = value[0]
             if not isinstance(value,int):
                 raise ValueError(f"the provided value is not an integer v={v}")
@@ -423,8 +423,7 @@ class MyImage:
     
     # clustering algorithms
     def kmean(self,k:int):
-
-        def mean(v:list[tuple[int,int]]):
+        def mean_rgb(v:list[tuple[int,int]]):
             r = g = b = 0
             N = len(v)
             for p in v:
@@ -437,6 +436,14 @@ class MyImage:
             g /= N
             b /= N
             return (r,g,b)
+
+        def mean_l(v:list[tuple[int,int]]):
+            g = 0
+            N = len(v)
+            for p in v:
+                x,y = p
+                g += self.r[y,x]
+            return g/N
 
         if k <= 1: raise ValueError("k must be > 1")
 
@@ -473,7 +480,7 @@ class MyImage:
                         break
                 clusters = {}
                 for k,v in new_clusters.items():
-                    clusters[mean(v)] = v
+                    clusters[mean_rgb(v)] = v
 
             r = []
             for v in clusters.values():
@@ -483,7 +490,48 @@ class MyImage:
                 r.append(rr)
             return r
 
+        elif self.mode == 'L':
+            clusters:dict[tuple[int|float],list[tuple[int,int]]] = {}
             
+            while len(clusters) < k:
+                x = np.random.randint(0,self.width)
+                y = np.random.randint(0,self.height)
+                g,_,_ = self[x,y]
+                if (x,y) in clusters:continue
+                clusters[g] = [(x,y)]
+            
+            distances_matrix = np.full((k,self.width * self.height),0) 
+            jumped = True
+            while jumped:
+                jumped = False
+                for i,clus in enumerate(clusters.keys()):
+                    gc = clus
+                    distances_matrix[i] = np.abs(self.r.flatten() - gc)
+                
+                
+                new_position = distances_matrix.argsort(axis=0)[0]
+                correspondance = {i:k for i,k in enumerate(clusters.keys())}
+                new_clusters = {k:[] for k in clusters.keys()}
+                for i in range(self.width*self.height):
+                    c = correspondance[int(new_position[i])]
+                    x,y = int(i%self.width),i//self.width
+                    new_clusters[c].append((x,y))
+                
+                for k in clusters.keys():
+                    if clusters[k] != new_clusters[k]:
+                        jumped = True
+                        break
+                clusters = {}
+                for k,v in new_clusters.items():
+                    clusters[mean_l(v)] = v
+
+            r = []
+            for v in clusters.values():
+                rr = []
+                for p in v:
+                    rr.append((p[0],p[1],*self[p[0],p[1]]))
+                r.append(rr)
+            return r
 
 
     def objects_segmentation(self) -> list:

@@ -43,7 +43,8 @@ def test_geometric_operations(img:MyImage):
     img.gray_scale().paste(1000,1000,(100,100)).translation((300,200)).show_image()
 
 def test_clustering(img:MyImage):
-    K = 3
+    K = 2
+    img = img.gray_scale().histo_equalisation()
     img.show_image()
     cluters = img.kmean(K)
     images = []
