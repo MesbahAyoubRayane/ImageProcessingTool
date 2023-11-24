@@ -44,9 +44,8 @@ def test_geometric_operations(img:MyImage):
 
 def test_clustering(img:MyImage):
     K = 3
-    img = img.rescale(0.25,0.25)
     img.show_image()
-    cluters = img.kmean(K,3)
+    cluters = img.kmean(K)
     images = []
     for i in range(len(cluters)):
         if len(cluters[i]) == 0:continue
@@ -54,7 +53,8 @@ def test_clustering(img:MyImage):
     MyImage.show_images(images)
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    test_histograme_based_operations(img)
+    test_clustering(img)
+    #test_histograme_based_operations(img)
     """img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
     img = img.rescale(2,2)
     start = time.time()

@@ -422,47 +422,69 @@ class MyImage:
         return segmented_img
     
     # clustering algorithms
-    # TODO implement the kmean for the gary images
-    def kmean(self,k:int,iterations:int=100):
-        def mean(items:list[tuple[int,int,int]]) -> (int,int,int):
-            sum_r = sum_g = sum_b = 0
-            X = Y = 0
-            for x in items:
-                x,y,r,g,b = x
-                X += x
-                Y += y
-                sum_r += r
-                sum_g += g
-                sum_b += b
-            N = len(items)
-            return (X//N,Y//N,sum_r//N,sum_g//N,sum_b//N)
+    def kmean(self,k:int):
+
+        def mean(v:list[tuple[int,int]]):
+            r = g = b = 0
+            N = len(v)
+            for p in v:
+                x,y = p
+                r += self.r[y,x]
+                b += self.b[y,x]
+                g += self.g[y,x]
+            
+            r /= N
+            g /= N
+            b /= N
+            return (r,g,b)
+
         if k <= 1: raise ValueError("k must be > 1")
-        clusters = {(
-            np.random.randint(0,self.width-1),
-            np.random.randint(0,self.height - 1),
-            np.random.randint(0,255),
-            np.random.randint(0,255),
-            np.random.randint(0,255)):[] for _ in range(k)}
-        jumped = True
-        while jumped:
-            jumped = False
-            for x,y,r,g,b in self.pixels():
-                c = min(clusters.keys(),
-                    key=lambda center:
-                        np.sqrt(((np.array(list(center)[2:]) - np.array([r,g,b]))**2).sum()))
-                if (x,y,r,g,b) not in clusters[c]:
-                    for _,l in clusters.items():
-                        while (x,y,r,g,b) in l:
-                            l.remove((x,y,r,g,b))
-                    clusters[c].append((x,y,r,g,b))
-                    jumped = True
-            # recomputing the centers
-            new_clusters = {mean(items) if len(items) else c:items.copy() 
-                for c,items in clusters.items()}
-            clusters = new_clusters
-            if iterations == 0:break
-            iterations -= 1
-        return list(clusters.values())
+
+        if self.mode == "RGB":
+            clusters:dict[tuple[int,int,int],list[tuple[int,int]]] = {}
+            while len(clusters) < k:
+                x = np.random.randint(0,self.width)
+                y = np.random.randint(0,self.height)
+                r,g,b = self[x,y]
+                if (x,y) in clusters:continue
+                clusters[(r,g,b)] = [(x,y)]
+            
+            distances_matrix = np.full((k,self.width * self.height),0) 
+            jumped = True
+            while jumped:
+                jumped = False
+                for i,clus in enumerate(clusters.keys()):
+                    rc,gc,bc = clus
+                    distances_matrix[i] = np.sqrt(
+                        (self.r.flatten() - rc)**2 + (self.g.flatten() - gc)**2 + (self.b.flatten() - bc)**2)
+                
+                
+                new_position = distances_matrix.argsort(axis=0)[0]
+                correspondance = {i:k for i,k in enumerate(clusters.keys())}
+                new_clusters = {k:[] for k in clusters.keys()}
+                for i in range(self.width*self.height):
+                    c = correspondance[int(new_position[i])]
+                    x,y = int(i%self.width),i//self.width
+                    new_clusters[c].append((x,y))
+                
+                for k in clusters.keys():
+                    if clusters[k] != new_clusters[k]:
+                        jumped = True
+                        break
+                clusters = {}
+                for k,v in new_clusters.items():
+                    clusters[mean(v)] = v
+
+            r = []
+            for v in clusters.values():
+                rr = []
+                for p in v:
+                    rr.append((p[0],p[1],*self[p[0],p[1]]))
+                r.append(rr)
+            return r
+
+            
+
 
     def objects_segmentation(self) -> list:
         ...
