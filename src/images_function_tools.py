@@ -15,14 +15,13 @@ class MyImage:
         r,g,b are numpy matrices the must have the same shape (width*height)
         mode : 'RGB' or 'L'
         """
-        mode = mode.upper()
-        if mode not in MyImage.MODES:
-            raise ValueError(f'Unsupported mode value {mode},mode must be L or RGB')
-        self.mode = mode
+        mode = mode.strip().upper()
+        if mode not in MyImage.MODES: raise ValueError(f'Unsupported mode value {mode},mode must be L or RGB')
         if r.ndim != 2 or g.ndim != 2 or b.ndim != 2:
             raise Exception('R,G,B chanels must be in a matrix form')
         if not (r.shape == g.shape and r.shape == b.shape):
             raise Exception('The provided arrays are not cohierant')
+        self.mode = mode
         self.r,self.g,self.b = r.copy().astype(np.uint8),g.copy().astype(np.uint8),b.copy().astype(np.uint8)
 
     @property
