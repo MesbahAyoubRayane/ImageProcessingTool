@@ -445,7 +445,6 @@ class MyImage:
             np.random.randint(0,255)):[] for _ in range(k)}
         jumped = True
         while jumped:
-            print(iterations)
             jumped = False
             for x,y,r,g,b in self.pixels():
                 c = min(clusters.keys(),
