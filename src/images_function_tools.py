@@ -532,10 +532,6 @@ class MyImage:
                 r.append(rr)
             return r
 
-
-    def objects_segmentation(self) -> list:
-        ...
-
     # histogrames
     def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "L":

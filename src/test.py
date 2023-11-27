@@ -5,6 +5,8 @@ from tkinter import filedialog
 import json
 import time
 
+from gui import StackFrame
+
 def test_create_histograme_functions(img:MyImage):
     img = img.gray_scale()
     print(img.histograme())
@@ -54,7 +56,10 @@ def test_clustering(img:MyImage):
     MyImage.show_images(images)
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    test_clustering(img)
+    sfrm = StackFrame(img,MyImage.translation,((1,1),))
+    sfrm.execute_frame().show_image()
+    
+    #test_clustering(img)
     #test_histograme_based_operations(img)
     """img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
     img = img.rescale(2,2)

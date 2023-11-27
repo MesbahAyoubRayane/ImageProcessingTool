@@ -1,6 +1,21 @@
 import tkinter as tk
 from tkinter import ttk
+import images_function_tools as ift
 
+class StackFrame:
+    """
+    This class will be used to accumulate all the operations on an image
+    each stack frae represent an operation
+    """
+    def __init__(self,img:ift.MyImage,f:callable,args:tuple) -> None:
+        self.function = f
+        self.img_in = img
+        self.args = args
+        r = self.function(self.img_in,*self.args)
+        if isinstance(r,list):
+            self.imgs_out:list[ift.MyImage] = r
+        elif isinstance(r,ift.MyImage):
+            self.imgs_out:list[ift.MyImage] = [r]
 
 class Application(tk.Tk):
     """
@@ -9,7 +24,7 @@ class Application(tk.Tk):
     """
     def __init__(self):
         super().__init__()
-        self.title("Image processing software")
+        self.title("Image processing application")
         self.geometry("400x500")
         self.__create_components__()
 
@@ -42,5 +57,4 @@ class Application(tk.Tk):
 
 
 if __name__ == "__main__":
-    Application().run()
-    # test
+    ...
