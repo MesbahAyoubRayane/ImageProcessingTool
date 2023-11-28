@@ -83,12 +83,56 @@ def test_clustering(img:MyImage):
     print(f"old mean filter = {end - start}")
     MyImage.show_images([old,imp])"""
 
+def test_median_filter(img:MyImage):
+    s = 11
+    MyImage.show_images([img.median_filter(s),img])
+
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    img = img.gray_scale()
+    K = 5
+    S_STD = 20
+    B_STD = 20
+    """img.show_histogram()
+    img.gaussian_filter(K,S_STD).show_histogram()
+    img.bilateral_filter(K,S_STD,B_STD).show_histogram()"""
+    MyImage.show_images([img,img.gaussian_filter(K,S_STD),img.bilateral_filter(K,S_STD,B_STD)])
+    exit(0)
+    data = np.array(
+        [[
+            [i]*5,
+            [i]*5,
+            [i]*5,
+            [i]*5,
+            [i]*5,
+        ]
+        for i in range(1,11)],
+        dtype=np.float64
+    )
+    print(data)
+    # Compute the sum along axis 0
+    result = np.sum(data, axis=(1,2))
+
+    # The result will be a 2D array of shape (5, 5)
+    print(result)
+    print(np.array(
+        [
+            np.full((5,5),result[i],dtype=np.float64)
+            for i in range(len(result))
+        ]
+    ))
+    data /= np.array(
+        [
+            np.full((5,5),result[i],dtype=np.float64)
+            for i in range(len(result))
+        ]
+    )
+    print(data)
+    
+    #test_median_filter(img)
+    """img = img.gray_scale()
     img.show_image()
     img.gaussian_filter(5,16).show_image()
-    #img.gray_scale().mean_filter(21).gaussian_filter(11,1).show_image()
+    """#img.gray_scale().mean_filter(21).gaussian_filter(11,1).show_image()
     """sfrm = StackFrame(img,MyImage.translation,((1,1),))
     sfrm.execute_frame().show_image()
     """

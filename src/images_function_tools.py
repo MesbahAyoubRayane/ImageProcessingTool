@@ -201,10 +201,10 @@ class MyImage:
         raise NotImplementedError()
 
     # histogram based operations
-    def histo_translation(self,i:int):
-        nr = (np.array(self.r,dtype=np.int32) + i) % 256
-        ng = (np.array(self.g,dtype=np.int32) + i) % 256
-        nb = (np.array(self.b,dtype=np.int32) + i) % 256
+    def histo_translation(self,t:int):
+        nr = np.clip(self.r.astype(np.int32)+t,0,255).astype(np.uint8)
+        ng = np.clip(self.g.astype(np.int32)+t,0,255).astype(np.uint8)
+        nb = np.clip(self.b.astype(np.int32)+t,0,255).astype(np.uint8)
         return MyImage(nr,ng,nb,self.mode)
     
     def histo_inverse(self):
@@ -287,7 +287,7 @@ class MyImage:
     def mean_filter(self,size:int):
         if isinstance(size,int):
             if size < 2:
-                raise ValueError(f'size must be > 1')
+                raise ValueError(f'size must be > 2')
             if size %2 == 0:
                 raise ValueError(f"The size must be odd number")
             if size > self.width or size >self.height:
@@ -405,9 +405,155 @@ class MyImage:
             return copy_img
         else:
             raise ValueError(f"{self.mode} is not supported")
-    
+
+    # TODO if i have time this is a good filter to implement
+    def bilateral_filter(self,size:int,std_spatial_gaussian:float,std_brightness_gaussian:float):
+        size = int(size)
+        std_s = float(std_spatial_gaussian)
+        std_b = float(std_brightness_gaussian)
+        X,Y = np.meshgrid(np.arange(size),np.arange(size))
+        s_kernel =  (np.exp(-0.5 * ((X - size//2) ** 2 + (Y - size //2) ** 2)/std_s ** 2) / (2*np.pi*std_s**2)).reshape((1,size,size))
+        cpy_img = MyImage.new(self.width,self.height,self.mode)
+
+        if self.mode == "RGB":
+            extended_r = np.pad(self.r, pad_width=size//2 , mode='reflect')
+            extended_g = np.pad(self.g, pad_width=size//2 , mode='reflect')
+            extended_b = np.pad(self.b, pad_width=size//2 , mode='reflect')
+
+            all_r_patchs = np.array(
+                [extended_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+
+            all_g_patchs = np.array(
+                [extended_g[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1] 
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+
+            all_b_patchs = np.array(
+                [extended_b[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1] 
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+
+            # gaussian kernels for red
+            b_r_kernel = np.array(
+                [
+                    (extended_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1] - 
+                    np.full((size,size),extended_r[y,x])) ** 2
+                    for y in range(size//2,self.height+size//2)
+                    for x in range(size//2,self.width + size//2)
+                ]
+            )
+            b_r_kernel = np.exp(b_r_kernel / np.full((1,size,size),-2*std_b**2)) / (np.sqrt(2*np.pi)*std_b)
+        
+            # gaussian kernels for green
+            b_g_kernel = np.array(
+                [
+                    (extended_g[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1] - 
+                    np.full((size,size),extended_g[y,x])) ** 2
+                    for y in range(size//2,self.height + size//2)
+                    for x in range(size//2,self.width + size//2)
+                ]
+            ) 
+            b_g_kernel = np.exp(b_g_kernel / np.full((1,size,size),-2*std_b**2)) / (np.sqrt(2*np.pi)*std_b)
+
+            
+            # gaussian kernels for blue
+            b_b_kernel = np.array(
+                [
+                    (extended_b[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1] - 
+                    np.full((size,size),extended_b[y,x])) ** 2
+                    for y in range(size//2,self.height + size//2)
+                    for x in range(size//2,self.width + size//2)
+                ]
+            ) 
+            b_b_kernel = np.exp(b_b_kernel / np.full((1,size,size),-2*std_b**2)) / (np.sqrt(2*np.pi)*std_b)
+
+             
+            # compute the new values of the pixels
+            tmp =  s_kernel * b_r_kernel
+            new_r = (all_r_patchs * tmp).sum(axis=(1,2)) /tmp.sum(axis=(1,2))
+            tmp =  s_kernel * b_g_kernel
+            new_g = (all_g_patchs * tmp).sum(axis=(1,2)) /tmp.sum(axis=(1,2))
+            tmp = s_kernel * b_b_kernel
+            new_b = (all_b_patchs * tmp).sum(axis=(1,2)) /tmp.sum(axis=(1,2))
+            
+
+            cpy_img.r = np.clip(new_r,0,255).astype(np.uint8).reshape(self.r.shape)
+            cpy_img.g = np.clip(new_g,0,255).astype(np.uint8).reshape(self.r.shape)
+            cpy_img.b = np.clip(new_b,0,255).astype(np.uint8).reshape(self.r.shape)
+
+            return cpy_img
+        
+        elif self.mode == 'L':
+            ...
+        else:
+            raise ValueError(f"{self.mode} is not supported")
+
+    def median_filter(self,size:int):
+        if isinstance(size,int):
+            if size < 2:
+                raise ValueError(f'size must be > 2')
+            if size %2 == 0:
+                raise ValueError(f"The size must be odd number")
+            if size > self.width or size >self.height:
+                raise ValueError(f'the provided size is so large')
+        else:
+            raise ValueError(f"{type(size)} can't be used as a filter")
+        
+        cpy_img = MyImage.new(self.width,self.height,self.mode)
+        
+        if self.mode == "RGB":
+            pad_r = np.pad(self.r,size//2,"reflect")
+            pad_g = np.pad(self.g,size//2,"reflect")
+            pad_b = np.pad(self.b,size//2,"reflect")
+
+            r_bag = np.array(
+                [pad_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+            g_bag = np.array(
+                [pad_g[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+            b_bag = np.array([
+                pad_b[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+
+            cpy_img.r = np.median(r_bag,axis=(1,2)).reshape(self.r.shape).astype(np.uint8)
+            cpy_img.g = np.median(g_bag,axis=(1,2)).reshape(self.r.shape).astype(np.uint8)
+            cpy_img.b = np.median(b_bag,axis=(1,2)).reshape(self.r.shape).astype(np.uint8)
+
+            return cpy_img
+
+        elif self.mode == 'L':
+            pad_r = np.pad(self.r,size//2,"reflect")
+            r_bag = np.array(
+                [pad_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+            cpy_img.r = np.median(r_bag,axis=(1,2)).reshape(self.r.shape).astype(np.uint8)
+            cpy_img.g = cpy_img.b = cpy_img.r
+            return cpy_img
+        else:
+            raise ValueError(f"{self.mode} is not supported")
     # segmentation algorithms
-    def color_segmt(self, threshold: int):
+    def edges_segmentation(self, threshold: int):
         kernel1 = np.full(shape=(3, 3), fill_value=0)
         kernel1[:, 0] = -1
         kernel1[:, -1] = 1
