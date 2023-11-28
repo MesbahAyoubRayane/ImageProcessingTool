@@ -803,7 +803,7 @@ class MyImage:
             return self.r.flatten().mean(),self.g.flatten().mean(),self.b.flatten().mean()
         elif self.mode == "L":
             return self.r.flatten().mean()
-        
+
     def std(self) -> tuple[float,float,float]|float:
         if self.mode == "RGB":
             return self.r.flatten().std(),self.g.flatten().std(),self.b.flatten().std()
@@ -816,65 +816,6 @@ class MyImage:
         elif self.mode == "L":
             return np.median(self.r.flatten())
         
-    def remove_outliers(self,metric:str,threash_hold:int|float):
-        """
-        This function compute the mean and median and std then test if each pixel is between mean - threshold * std and mean + threashold * std if is not then it will replace it buy either the mean of the median  
-        """
-        metric = metric.upper()
-        if threash_hold <= 0:
-            raise ValueError("threshold must be an positive number")
-        
-        if metric not in ('MEAN','MEDIAN'):
-            raise ValueError(f"The provided value for metric {metric} is not correct , choose from {('MEAN','MEDIAN')}")
-        
-        if self.mode == "L":
-            mean = self.mean()
-            median = self.median()
-            std = self.std()
-            upper_bound = mean + threash_hold * std
-            lower_bound = mean - threash_hold * std
-            nv = np.full(self.r.size,0,dtype=np.uint8)
-            replcament = mean if metric == "MEAN" else median
-            for i,v in enumerate(self.r.flatten()):
-                if lower_bound<v<upper_bound:
-                    nv[i] = v
-                else:
-                    nv[i] = replcament
-            nv = nv.reshape(self.r.shape)
-            return MyImage(nv,nv,nv,"L")
-        
-        elif self.mode =='RGB':
-            mean_r,mean_g,mean_b = self.mean()
-            median_r,median_g,median_b = self.median()
-            std_r,std_g,std_b = self.std()
-            replcament_r,replcament_g,replcament_b = (mean_r,mean_g,mean_b) if metric =="MEAN" else (median_r,median_g,median_b)
-            
-            lower_bound_r,lower_bound_g,lower_bound_b = mean_r - threash_hold * std_r,mean_g - threash_hold * std_g,mean_b - threash_hold * std_b
-            upper_bound_r,upper_bound_g,upper_bound_b = mean_r +  threash_hold* std_r,mean_g + threash_hold * std_g,mean_b +  threash_hold * std_b 
-
-            nv_r = np.full(self.r.size,0,dtype=np.uint8)
-            nv_g = np.full(self.r.size,0,dtype=np.uint8)
-            nv_b = np.full(self.r.size,0,dtype=np.uint8)
-            
-            for i,r,g,b in zip(range(self.width*self.height),self.r.flatten(),self.g.flatten(),self.b.flatten()):
-                if lower_bound_r < r < upper_bound_r:
-                    nv_r[i] = r
-                    nv_r[i] = replcament_r
-
-                if lower_bound_g < g < upper_bound_g:
-                    nv_g[i] = g
-                    nv_g[i] = replcament_g
-                
-                if lower_bound_b < b < upper_bound_b:
-                    nv_b[i] = b
-                else:
-                    nv_b[i] = replcament_b
-            
-            return MyImage(nv_r.reshape(self.r.shape),nv_g.reshape(self.g.shape),nv_b.reshape(self.b.shape),self.mode)
-
-        else:
-            raise Exception(f"mode {self.mode} is not supported")
-
     # static functions
     @staticmethod
     def new(w:int,h:int,mode:str):
@@ -883,7 +824,7 @@ class MyImage:
         """
         mode = mode.upper()
         if mode not in MyImage.MODES:
-            raise ValueError(f'the mode {mode} is not provided')   
+            raise ValueError(f'the selected mode <{mode}> is not provided')   
         v = np.full((h,w),0,dtype=np.uint8)
         return MyImage(v,v,v,mode)
     @staticmethod
