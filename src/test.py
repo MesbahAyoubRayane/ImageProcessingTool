@@ -106,6 +106,5 @@ def test_binary_taging(img:MyImage):
 
 
 if __name__ =="__main__":
-    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).median_filter(5).edges_detection(125).show_image()
-    
-    #test_binary_taging(img)
+    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).median_filter(5)
+    img.edge_detection_robert(20).show_image()

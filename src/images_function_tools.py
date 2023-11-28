@@ -582,7 +582,7 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not supported")
     # segmentation algorithms
-    def edges_detection(self, threshold: int):
+    def edges_detection_prewit(self, threshold: int):
         """
         threshold is an integer between 0 and 255
         """
@@ -644,6 +644,60 @@ class MyImage:
                     segmented_img.b[y, x] = 0
 
         return segmented_img
+    
+    def edge_detection_robert(self,threshold:int):
+        kernel_diag = np.array([[-1,0],[0,1]]).reshape((1,2,2))
+        kernel_rev_diag = np.array([[0,-1],[1,0]]).reshape((1,2,2))
+
+        extended_r = np.pad(self.r,pad_width=1,mode='reflect')
+        extended_g = np.pad(self.g,pad_width=1,mode='reflect')
+        extended_b = np.pad(self.b,pad_width=1,mode='reflect')
+
+        W,H = self.width,self.height
+        if not (W > 0 and H > 0):raise ValueError('the image is very small')
+
+        bage_r = np.array([
+            extended_r[y:y+2,x:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        bage_g = np.array([
+            extended_g[y:y+2,x:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        bage_b = np.array([
+            extended_b[y:y+2,x:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        G_diag_r = (bage_r * kernel_diag).sum(axis=(1,2))
+        G_diag_g = (bage_g * kernel_diag).sum(axis=(1,2))
+        G_diag_b = (bage_b * kernel_diag).sum(axis=(1,2))
+
+        G_rev_diag_r = (bage_r * kernel_rev_diag).sum(axis=(1,2))
+        G_rev_diag_g = (bage_g * kernel_rev_diag).sum(axis=(1,2))
+        G_rev_diag_b = (bage_b * kernel_rev_diag).sum(axis=(1,2))
+
+        G_r:np.ndarray = np.sqrt(G_diag_r ** 2 + G_rev_diag_r ** 2)
+        G_g:np.ndarray = np.sqrt(G_diag_g ** 2 + G_rev_diag_g ** 2)
+        G_b:np.ndarray = np.sqrt(G_diag_b ** 2 + G_rev_diag_b ** 2)
+
+        G_r:np.ndarray = (G_r - G_r.min())/(G_r.max() - G_r.min()) * 255
+        G_g:np.ndarray = (G_g - G_g.min())/(G_g.max() - G_g.min()) * 255
+        G_b:np.ndarray = (G_b - G_b.min())/(G_b.max() - G_b.min()) * 255
+
+        f = np.vectorize(lambda x:255 if x > threshold else 0)
+        G_r = f(G_r)
+        G_g = f(G_g)
+        G_b = f(G_b)
+
+        G_r = G_r.astype(np.uint8).reshape(self.r.shape)
+        G_g = G_g.astype(np.uint8).reshape(self.r.shape)
+        G_b = G_b.astype(np.uint8).reshape(self.r.shape)
+
+        return MyImage(G_r,G_g,G_b,self.mode)
+
     
     # clustering algorithms
     def kmean(self,k:int):
