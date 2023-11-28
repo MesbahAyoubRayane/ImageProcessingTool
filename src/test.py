@@ -54,11 +54,41 @@ def test_clustering(img:MyImage):
         if len(cluters[i]) == 0:continue
         images.append(MyImage.new_from_pixels(cluters[i],img.mode,img.width,img.height))
     MyImage.show_images(images)
+
+
+"""def test_imp_gaussian(img:MyImage):
+    k = 11
+    img.show_image()
+    start = time.time()
+    imp = img.gaussian_filter_imp(k,20)
+    end = time.time()
+    print(f"improved gaussian filter = {end - start}")
+    start = time.time()
+    old = img.gaussian_filter(k,20)
+    end = time.time()
+    print(f"old gaussian filter = {end - start}")
+    MyImage.show_images([old,imp])"""
+
+
+"""def test_imp_mean(img:MyImage):
+    s = 51
+    img.show_image()
+    start = time.time()
+    imp = img.mean_filter_imp(s)
+    end = time.time()
+    print(f"improved mean filter = {end - start}")
+    start = time.time()
+    old = img.mean_filter(s)
+    end = time.time()
+    print(f"old mean filter = {end - start}")
+    MyImage.show_images([old,imp])"""
+
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    sfrm = StackFrame(img,MyImage.translation,((1,1),))
+    img.gray_scale().mean_filter(21).gaussian_filter(11,1).show_image()
+    """sfrm = StackFrame(img,MyImage.translation,((1,1),))
     sfrm.execute_frame().show_image()
-    
+    """
     #test_clustering(img)
     #test_histograme_based_operations(img)
     """img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
