@@ -581,7 +581,8 @@ class MyImage:
             return cpy_img
         else:
             raise ValueError(f"{self.mode} is not supported")
-    # segmentation algorithms
+    
+    # TODO you need to normilize the gradiant before testing the threshold
     def edges_detection_prewit(self, threshold: int):
         """
         threshold is an integer between 0 and 255
@@ -697,7 +698,10 @@ class MyImage:
         G_b = G_b.astype(np.uint8).reshape(self.r.shape)
 
         return MyImage(G_r,G_g,G_b,self.mode)
-
+    
+    # TODO
+    def edge_detection_sobel(self,threshold:int):
+        ...
     
     # clustering algorithms
     def kmean(self,k:int):
@@ -814,6 +818,7 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not suppotred")
 
+    # TODO this function needs a better integration wioth other functions
     def binary_tagging(self):
         def get_neighbores(x:int,y:int): return [(i,j) for i in (x,x+1,x-1) for j in (y,y-1,y+1)]
         m:np.ndarray =np.zeros(self.r.shape)
@@ -847,12 +852,6 @@ class MyImage:
                     img.b[y,x] = b
         
         return img
-
-        
-        
-
-
-
                       
     # histogrames
     def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
