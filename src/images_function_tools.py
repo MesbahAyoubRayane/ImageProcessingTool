@@ -582,7 +582,13 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not supported")
     # segmentation algorithms
-    def edges_segmentation(self, threshold: int):
+    def edges_detection(self, threshold: int):
+        """
+        threshold is an integer between 0 and 255
+        """
+        threshold = int(threshold)
+        if threshold < 0 or threshold > 255:
+            raise ValueError(f"threshold must be between 0 and 255")
         kernel1 = np.full(shape=(3, 3), fill_value=0)
         kernel1[:, 0] = -1
         kernel1[:, -1] = 1
