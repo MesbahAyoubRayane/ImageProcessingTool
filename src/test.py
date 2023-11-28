@@ -87,83 +87,24 @@ def test_median_filter(img:MyImage):
     s = 11
     MyImage.show_images([img.median_filter(s),img])
 
+def test_binary_taging(img:MyImage):
+    k = 5
+    imgs =[list(img.pixels())]
+    imgs.extend(list(filter(lambda x: len(x) > 0, img.kmean(k))))
+    imgs = [MyImage.new_from_pixels(p,img.mode,img.width,img.height) for p in imgs]
+    MyImage.show_images(imgs)
+    i = None
+    while True:
+        i = input("select the image to tag")
+        try:
+            i = int(i)
+            break
+        except Exception as _:
+            continue
+    img_to_tag = imgs[i]
+    img_to_tag.binary_tagging().show_image()
+
+
 if __name__ =="__main__":
-    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    K = 5
-    S_STD = 20
-    B_STD = 20
-    """img.show_histogram()
-    img.gaussian_filter(K,S_STD).show_histogram()
-    img.bilateral_filter(K,S_STD,B_STD).show_histogram()"""
-    MyImage.show_images([img,img.gaussian_filter(K,S_STD),img.bilateral_filter(K,S_STD,B_STD)])
-    exit(0)
-    data = np.array(
-        [[
-            [i]*5,
-            [i]*5,
-            [i]*5,
-            [i]*5,
-            [i]*5,
-        ]
-        for i in range(1,11)],
-        dtype=np.float64
-    )
-    print(data)
-    # Compute the sum along axis 0
-    result = np.sum(data, axis=(1,2))
-
-    # The result will be a 2D array of shape (5, 5)
-    print(result)
-    print(np.array(
-        [
-            np.full((5,5),result[i],dtype=np.float64)
-            for i in range(len(result))
-        ]
-    ))
-    data /= np.array(
-        [
-            np.full((5,5),result[i],dtype=np.float64)
-            for i in range(len(result))
-        ]
-    )
-    print(data)
-    
-    #test_median_filter(img)
-    """img = img.gray_scale()
-    img.show_image()
-    img.gaussian_filter(5,16).show_image()
-    """#img.gray_scale().mean_filter(21).gaussian_filter(11,1).show_image()
-    """sfrm = StackFrame(img,MyImage.translation,((1,1),))
-    sfrm.execute_frame().show_image()
-    """
-    #test_clustering(img)
-    #test_histograme_based_operations(img)
-    """img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    img = img.rescale(2,2)
-    start = time.time()
-    imrpvedimg = img.rotate_imp(30)
-    end = time.time()
-    improved = end - start
-    print(f"improved {improved}")
-    start = time.time()
-    rotateimg = img.rotate(30)
-    end = time.time()
-    old = end - start
-    print(f"old {old}")
-
-    if old < improved:
-        print(f"old is better than imrpved {improved - old}")
-    else:
-        print(f"improved is better than old {old - improved }")
-    MyImage.show_images([imrpvedimg,rotateimg])"""
-    #img.rescale(0.1,0.1).rescale(10,10).save_image("test.png")
-    #img.rotate(30).show_image()
-    #img.color_segmt(70).show_image()
-    #test_clustering(img)
-    #array = np.ones((5,5))
-    #img.mean_filter(11).show_image()
-    #test_geometric_operations(img)
-    #img.rotate(30,"","ANTI_CLOCK_WISE").show_image()
-    #test_histograme_based_operations(img)
-    #test_create_histograme_functions(img)
-    #img.gaussian_filter(11,3).histo_translation(20).show_image()
+    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).median_filter(5)
+    test_binary_taging(img)

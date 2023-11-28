@@ -72,7 +72,7 @@ class MyImage:
             if isinstance(value,tuple) or isinstance(value,list):
                 value = value[0]
             if not isinstance(value,int):
-                raise ValueError(f"the provided value is not an integer v={v}")
+                raise ValueError(f"the provided value is not an integer v={value}")
             if not 0<=value<256:
                 raise ValueError('RGB values must be between 0 and 255 inclusive')
             self.r[y,x],self.g[y,x],self.b[y,x] = value,value,value
@@ -119,20 +119,20 @@ class MyImage:
                 cpy[x_,y_] = v if self.mode == "RGB" else v[0]
         return cpy
     
-    def paste(self,new_width:int,new_height:int,p:tuple[int,int]):
+    def paste(self,new_width:int,new_height:int,upper_left_point:tuple[int,int]):
         """
-        This function allow you to paste another function on the new image, the new image must be of a larger size
-        for it to hold the old image 
+        This function allow you to paste another image on the new image, the new image must be of a larger size
+        for it to contain the old image 
         """
         if self.width > new_width or self.height > new_height:
             raise ValueError('The image is bigger than the canvas')
         img = MyImage.new(new_width,new_height,self.mode)
 
         for x,y,*v in self.pixels():
-            if x+p[0] < img.width and y + p[1] < img.height:
-                img[x+p[0],y+p[1]] = v if self.mode == 'RGB' else v[0]
+            if x+upper_left_point[0] < img.width and y + upper_left_point[1] < img.height:
+                img[x+upper_left_point[0],y+upper_left_point[1]] = v if self.mode == 'RGB' else v[0]
             
-        return img    
+        return img  
     
     def reflecte(self,axe:str):
         """
@@ -411,6 +411,17 @@ class MyImage:
         size = int(size)
         std_s = float(std_spatial_gaussian)
         std_b = float(std_brightness_gaussian)
+        
+        if size < 2:
+            raise ValueError(f'size must be > 2')
+        if size %2 == 0:
+            raise ValueError(f"The size must be odd number")
+        if size > self.width or size >self.height:
+            raise ValueError(f'the provided size is so large')
+        
+        if std_b <= 0 or std_s <= 0:
+            raise ValueError(f"std value must be > 0 {std_s,std_b}")
+        
         X,Y = np.meshgrid(np.arange(size),np.arange(size))
         s_kernel =  (np.exp(-0.5 * ((X - size//2) ** 2 + (Y - size //2) ** 2)/std_s ** 2) / (2*np.pi*std_s**2)).reshape((1,size,size))
         cpy_img = MyImage.new(self.width,self.height,self.mode)
@@ -492,7 +503,25 @@ class MyImage:
             return cpy_img
         
         elif self.mode == 'L':
-            ...
+            extended_r = np.pad(self.r, pad_width=size//2 , mode='reflect')
+            all_r_patchs = np.array(
+                [extended_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+            b_r_kernel = np.array(
+                [
+                    (extended_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1] - 
+                    np.full((size,size),extended_r[y,x])) ** 2
+                    for y in range(size//2,self.height+size//2)
+                    for x in range(size//2,self.width + size//2)
+                ]
+            )
+            tmp =  s_kernel * b_r_kernel
+            new_r = (all_r_patchs * tmp).sum(axis=(1,2)) /tmp.sum(axis=(1,2))
+            cpy_img.b = cpy_img.g = cpy_img.r = np.clip(new_r,0,255).astype(np.uint8).reshape(self.r.shape)
+            return cpy_img
         else:
             raise ValueError(f"{self.mode} is not supported")
 
@@ -634,6 +663,7 @@ class MyImage:
                 g += self.r[y,x]
             return g/N
 
+        k = int(k)
         if k <= 1: raise ValueError("k must be > 1")
 
         if self.mode == "RGB":
@@ -721,7 +751,49 @@ class MyImage:
                     rr.append((p[0],p[1],*self[p[0],p[1]]))
                 r.append(rr)
             return r
+        else:
+            raise ValueError(f"{self.mode} is not suppotred")
 
+    def binary_tagging(self):
+        def get_neighbores(x:int,y:int): return [(i,j) for i in (x,x+1,x-1) for j in (y,y-1,y+1)]
+        m:np.ndarray =np.zeros(self.r.shape)
+        colored:np.ndarray = (self.r > 0)|(self.g > 0)|(self.b > 0)
+        Tag = 1
+        for x in range(self.width):
+            for y in range(self.height):
+                if m[y,x] != 0 or colored[y,x] == False:continue
+                m[y,x] = Tag
+                neighbores = get_neighbores(x,y)
+                while len(neighbores) > 0:
+                    xn,yn = neighbores.pop()
+                    if not (0<=xn<self.width and 0<=yn<self.height): continue 
+                    if m[yn,xn] != 0 or colored[yn,xn] == False:continue
+                    m[yn,xn] = Tag
+                    neighbores.extend(get_neighbores(xn,yn)) 
+                Tag += 1
+        colors = set()
+        while len(colors) < Tag:
+            colors.add((np.random.randint(0,256,dtype=np.uint8),
+                   np.random.randint(0,256,dtype=np.uint8),
+                   np.random.randint(0,256,dtype=np.uint8)))
+        colors = list(colors)
+        img = MyImage.new(self.width,self.height,self.mode)
+        for x in range(self.width):
+            for y in range(self.height):
+                if m[y,x] != 0:
+                    r,g,b = colors[int(m[y,x])]
+                    img.r[y,x] = r
+                    img.g[y,x] = g
+                    img.b[y,x] = b
+        
+        return img
+
+        
+        
+
+
+
+                      
     # histogrames
     def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "L":
