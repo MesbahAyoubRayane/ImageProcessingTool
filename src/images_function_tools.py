@@ -281,10 +281,7 @@ class MyImage:
     # filters
     def gray_scale(self):
         coef = MyImage.DEFAUL_GRAY_SCALE_COEF
-        R = self.r * coef[0]
-        G = self.g * coef[1]
-        B = self.b * coef[2]
-        Gray = np.array((R + G + B) / sum(coef),dtype=np.int8)
+        Gray = np.array((self.r * coef[0] + self.g * coef[1] + self.b * coef[2]) / sum(coef),dtype=np.uint8)
         return MyImage(Gray,Gray,Gray,'L')
 
     def mean_filter(self,size:int):
@@ -326,6 +323,7 @@ class MyImage:
         copy_img.b = np.clip((b_bag * kernel).sum(axis=(1,2)),0,255).astype(np.uint8).reshape(self.r.shape)
         return copy_img
 
+    # TODO this function can be improved using two convolution the first on the x axis and the second on the y axes
     def gaussian_filter(self, size: int, std: float):
         if isinstance(size, int):
             if size < 2:
@@ -350,44 +348,63 @@ class MyImage:
         Padding involves adding extra pixels around the edges of the image 
         to ensure that the filter kernel can be applied to all the pixels, even those at the image boundary
         """
-        extended_r = np.pad(self.r, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
-        extended_g = np.pad(self.g, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
-        extended_b = np.pad(self.b, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+        if self.mode == "RGB":
+            extended_r = np.pad(self.r, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+            extended_g = np.pad(self.g, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+            extended_b = np.pad(self.b, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
 
-        copy_img = MyImage.new(self.width,self.height,self.mode)
+            copy_img = MyImage.new(self.width,self.height,self.mode)
 
-        all_r_patchs = np.array(
-            [extended_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
-            for y in range(size//2,self.height+size//2)
-            for x in range(size//2,self.width + size//2)
-            ]
-        )
+            all_r_patchs = np.array(
+                [extended_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
 
-        all_g_patchs = np.array(
-            [extended_g[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1] 
-            for y in range(size//2,self.height+size//2)
-            for x in range(size//2,self.width + size//2)
-            ]
-        )
+            all_g_patchs = np.array(
+                [extended_g[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1] 
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
 
-        all_b_patchs = np.array(
-            [extended_b[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1] 
-            for y in range(size//2,self.height+size//2)
-            for x in range(size//2,self.width + size//2)
-            ]
-        )
+            all_b_patchs = np.array(
+                [extended_b[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1] 
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
 
-        kernel = kernel.reshape((1,size,size))
-        all_r_conv:np.ndarray = np.clip((all_r_patchs * kernel).sum(axis=(1,2)),0,255).reshape(self.r.shape)
-        all_g_conv:np.ndarray = np.clip((all_g_patchs * kernel).sum(axis=(1,2)),0,255).reshape(self.r.shape)
-        all_b_conv:np.ndarray = np.clip((all_b_patchs * kernel).sum(axis=(1,2)),0,255).reshape(self.r.shape)
+            kernel = kernel.reshape((1,size,size))
+            all_r_conv:np.ndarray = np.clip((all_r_patchs * kernel).sum(axis=(1,2)),0,255).reshape(self.r.shape)
+            all_g_conv:np.ndarray = np.clip((all_g_patchs * kernel).sum(axis=(1,2)),0,255).reshape(self.r.shape)
+            all_b_conv:np.ndarray = np.clip((all_b_patchs * kernel).sum(axis=(1,2)),0,255).reshape(self.r.shape)
 
 
-        copy_img.r = all_r_conv.astype(np.uint8)
-        copy_img.g = all_g_conv.astype(np.uint8)
-        copy_img.b = all_b_conv.astype(np.uint8)
+            copy_img.r = all_r_conv.astype(np.uint8)
+            copy_img.g = all_g_conv.astype(np.uint8)
+            copy_img.b = all_b_conv.astype(np.uint8)
 
-        return copy_img
+            return copy_img
+        
+        elif self.mode == "L":
+            extended_r = np.pad(self.r, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
+            copy_img = MyImage.new(self.width,self.height,self.mode)
+            all_r_patchs = np.array(
+                [extended_r[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+                for y in range(size//2,self.height+size//2)
+                for x in range(size//2,self.width + size//2)
+                ]
+            )
+            kernel = kernel.reshape((1,size,size))
+            all_r_conv:np.ndarray = np.clip((all_r_patchs * kernel).sum(axis=(1,2)),0,255).reshape(self.r.shape)
+            copy_img.r = all_r_conv.astype(np.uint8)
+            copy_img.g = copy_img.r
+            copy_img.b = copy_img.g
+            return copy_img
+        else:
+            raise ValueError(f"{self.mode} is not supported")
     
     # segmentation algorithms
     def color_segmt(self, threshold: int):

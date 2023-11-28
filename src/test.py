@@ -85,7 +85,10 @@ def test_clustering(img:MyImage):
 
 if __name__ =="__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    img.gray_scale().mean_filter(21).gaussian_filter(11,1).show_image()
+    img = img.gray_scale()
+    img.show_image()
+    img.gaussian_filter(5,16).show_image()
+    #img.gray_scale().mean_filter(21).gaussian_filter(11,1).show_image()
     """sfrm = StackFrame(img,MyImage.translation,((1,1),))
     sfrm.execute_frame().show_image()
     """
