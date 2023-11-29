@@ -91,9 +91,9 @@ class Application(Window):
 
         menues["Filters"].add_command(label='Mean', command=self.filters_mean_menu_bare_command) # 1 -> 1
         menues["Filters"].add_command(label='Gaussian', command=self.filters_gaussian_menu_bare_command) # 1 -> 1
-        menues["Filters"].add_command(label='Bilateral', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Bilateral', command=self.filters_bilateral_menu_bare_command) # 1 -> 1
         menues["Filters"].add_command(label='Median', command=self.filters_median_menu_bare_command) # 1 -> 1
-        menues["Filters"].add_command(label='Lablacian', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Lablacian', command=self.filters_lablacian_menu_bare_command) # 1 -> 1
 
         menues["Histogram based operations"].add_command(label='Translation', command=self.histogram_based_operations_translation_menu_bare_command) # 1 -> 1
         menues["Histogram based operations"].add_command(label='Inverse', command=self.histograme_based_operations_inverse_menu_bare_command) # 1 -> 1
@@ -113,7 +113,7 @@ class Application(Window):
         """ MEAN , STANDAR DEVIATION , VARIANCE,MEDIAN , Outliers, DIMENSIONS , IMAGE MODE RGB,L"""
 
     def __create_operations_stack__(self):
-        self.operation_stack_tree_view = ttk.Treeview(master=self, columns=('N°', 'Operation', 'Args'), show='headings')
+        self.operation_stack_tree_view = ttk.Treeview(master=self, columns=('N°', 'Operation', 'Args'), show='headings',selectmode="extended")
 
         self.operation_stack_tree_view.heading('N°', text='N°')
         self.operation_stack_tree_view.heading('Operation', text='Operation')
@@ -123,6 +123,8 @@ class Application(Window):
     
     def __create_buttons__(self):
         self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command,bootstyle="danger")
+        self.cpy_btn = ttk.Button(self,text="Copy to top",command=self.btn_cpy_command,bootstyle="success")
+        self.cpy_btn.pack(fill=tk.BOTH,padx=5,pady=3) 
         self.dlt_btn.pack(fill=tk.BOTH,padx=5,pady=3)
 
     def run(self):
@@ -497,7 +499,6 @@ class Application(Window):
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.resolution_underscaling,(factor,),'o'))
         self.redraw_operation_stack_tree_view()
 
-
     # Histogram based operations
     def histogram_based_operations_translation_menu_bare_command(self):
         if len(self.operation_stack) == 0:
@@ -636,6 +637,10 @@ class Application(Window):
             messagebox.showerror('ERROR',"MEAN FILTER KERNEL MUST HAVE AN ODD SIZE")
             return
         
+        if size > input_imgs.width * input_imgs.height:
+            messagebox.showerror('ERROR',"THE KERNEL SIZE IS BEGGER THAN THE IMAGE")
+            return
+        
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.mean_filter,(size,),'o'))
         self.redraw_operation_stack_tree_view()
 
@@ -663,6 +668,10 @@ class Application(Window):
             return
         if size % 2 == 0:
             messagebox.showerror('ERROR',"GAUSSIAN FILTER KERNEL MUST HAVE AN ODD SIZE")
+            return
+        
+        if size > input_imgs.width * input_imgs.height:
+            messagebox.showerror('ERROR',"THE KERNEL SIZE IS BEGGER THAN THE IMAGE")
             return
         
         std = simpledialog.askfloat("STANDARE DEVIATION","ENTER THE VALUE OF THE STANDAR DEVIATIONS")
@@ -703,9 +712,100 @@ class Application(Window):
             messagebox.showerror('ERROR',"MEDIAN FILTER KERNEL MUST HAVE AN ODD SIZE")
             return
         
+        if size > input_imgs.width * input_imgs.height:
+            messagebox.showerror('ERROR',"THE KERNEL SIZE IS BEGGER THAN THE IMAGE")
+            return
+        
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.median_filter,(size,),'o'))
         self.redraw_operation_stack_tree_view()
 
+    def filters_lablacian_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        size = simpledialog.askinteger("LAPLACIAN FILTER SIZE","ENTER THE SIZE OF THE LAPLACIAN FILTER KERNEL")
+        if size is None:
+            messagebox.showerror("ERROR","THE OPERATION WAS CANCELLED")
+            return
+        if size <= 0:
+            messagebox.showerror('ERROR',"SIZE OF THE LAPLACIAN FILTER KERNEL MUST BE POSITIVE")
+            return
+        if size % 2 == 0:
+            messagebox.showerror('ERROR',"LAPLACIAN FILTER KERNEL MUST HAVE AN ODD SIZE")
+            return
+        
+        if size > input_imgs.width * input_imgs.height:
+            messagebox.showerror('ERROR',"THE KERNEL SIZE IS BEGGER THAN THE IMAGE")
+            return
+        
+        distance = simpledialog.askinteger("DISTANCE TYPE","CHOOSE THE DISTANCE FOR THE LAPLACIAN FILTER 1 FOR MANHATTEN AND 2 FOR MAX")
+        if distance is None:
+            messagebox.showerror("ERROR","THE OPERATION WAS CANCELLED")
+            return
+        if distance not in (1,2):
+            messagebox.showerror("ERROR","UNSOPPRTED DISTANCE")
+            return
+        distance = 'max' if distance == 2 else "manhatten"
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.laplacian_sharpning_filter,(distance,size),'o'))
+        self.redraw_operation_stack_tree_view()
+    
+    def filters_bilateral_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        size = simpledialog.askinteger("BILETARAL FILTER SIZE","ENTER THE SIZE OF THE BILETARAL FILTER KERNEL")
+        if size is None:
+            messagebox.showerror("ERROR","THE OPERATION WAS CANCELLED")
+            return
+        if size <= 0:
+            messagebox.showerror('ERROR',"SIZE OF THE BILETARAL FILTER KERNEL MUST BE POSITIVE")
+            return
+        if size % 2 == 0:
+            messagebox.showerror('ERROR',"BILETARAL FILTER KERNEL MUST HAVE AN ODD SIZE")
+            return
+        if size > input_imgs.width * input_imgs.height:
+            messagebox.showerror('ERROR',"THE KERNEL SIZE IS BEGGER THAN THE IMAGE")
+            return
+        std_s = simpledialog.askfloat("STANDARE DEVIATION","ENTER THE VALUE OF THE STANDAR DEVIATIONS FOR THE SPATIAL GAUSSIAN")
+        if std_s is None:
+            messagebox.showerror('ERROR',"OPERATION WAS CANCELLED")
+            return
+        if std_s <= 0:
+            messagebox.showerror("ERROR","STANDAR DEVIATION MUST BE POSITIVE")
+            return
+        
+        std_b = simpledialog.askfloat("STANDARE DEVIATION","ENTER THE VALUE OF THE STANDAR DEVIATIONS FRO THE BRIGHTNESS GAUSSIAN")
+        if std_b is None:
+            messagebox.showerror('ERROR',"OPERATION WAS CANCELLED")
+            return
+        if std_b <= 0:
+            messagebox.showerror("ERROR","STANDAR DEVIATION MUST BE POSITIVE")
+            return
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.bilateral_filter,(size,std_s,std_b),'o'))
+        self.redraw_operation_stack_tree_view()
     # VISUALISATION
     def visualization_show_menu_bare_command(self):
         """
@@ -731,8 +831,15 @@ class Application(Window):
         
         self.operation_stack = new_operation_stack
         self.redraw_operation_stack_tree_view()
-        
     
+    def btn_cpy_command(self):
+        selected_images  = self.get_selected_images_by_index()
+        new_operation_stack = []
+        for i,sframe in enumerate(self.operation_stack):
+            if i in selected_images:
+                new_operation_stack.append(sframe)
+        self.operation_stack.extend(new_operation_stack)
+        self.redraw_operation_stack_tree_view()
 
     # useful methods
     def redraw_operation_stack_tree_view(self):
