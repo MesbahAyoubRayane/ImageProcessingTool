@@ -1091,7 +1091,8 @@ class MyImage:
             return np.median(self.r.flatten()),np.median(self.g.flatten()),np.median(self.b.flatten())
         elif self.mode == "L":
             return np.median(self.r.flatten())
-        
+    
+    
     # static functions
     @staticmethod
     def new(w:int,h:int,mode:str):
