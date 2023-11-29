@@ -78,9 +78,9 @@ class Application(Window):
         menues["Files"].add_command(label='Exit', command=self.exit_menu_bare_command)
 
         menues["Geometric operations"].add_command(label='Translation', command=self.geometric_operations_translation_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Rotation', command=None)
-        menues["Geometric operations"].add_command(label='Reflection', command=None)
-        menues["Geometric operations"].add_command(label='Re-scale', command=None)
+        menues["Geometric operations"].add_command(label='Rotation', command=self.geometric_operations_rotation_menu_bare_command)
+        menues["Geometric operations"].add_command(label='Reflection', command=self.geometric_operations_reflection_menu_bare_command)
+        menues["Geometric operations"].add_command(label='Re-scale', command=self.geometric_operations_rescale_menu_bare_command)
         menues["Geometric operations"].add_command(label='Cut', command=None)
         menues["Geometric operations"].add_command(label='Past on canvas', command=None)
         menues["Geometric operations"].add_command(label='Overlay', command=None)
@@ -268,6 +268,64 @@ class Application(Window):
         
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.rotate,(theta,),'o'))
         self.redraw_operation_stack_tree_view()
+    
+    def geometric_operations_reflection_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+        direction  = simpledialog.askstring("REFLECTION",'H FOR HORIZANTALL AND V FOR VERTICAL')
+        if direction is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        direction = direction.lower().strip()
+        if direction not in ['h','v']:
+            messagebox.showerror("ERROR",f"DIRECTION MUST BE H OR V BUT {direction} WAS GIVEN")
+            return
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.reflecte,(direction,),'o'))
+        self.redraw_operation_stack_tree_view()
+
+    def geometric_operations_rescale_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        x = simpledialog.askfloat("Re-SCALE FACTORS","ENTER THE RESCALING FACTOR FOR THE X AXE")
+        if x is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        y = simpledialog.askfloat("Re-SCALE FACTORS","ENTER THE RESCALING FACTOR FOR THE Y AXE")
+        if y is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        
+        if y <= 0 or x <= 0:
+            messagebox.showerror("ERROR","X FACTOR AND Y FACTOR MUST BE POSITIVE")
+            return
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.rescale,(x,y),'o'))
+        self.redraw_operation_stack_tree_view()
+
 
 
     # VISUALISATION
