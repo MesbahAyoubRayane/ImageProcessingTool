@@ -4,7 +4,6 @@ from images_function_tools import MyImage
 from tkinter import filedialog
 import json
 import time
-
 from gui import StackFrame
 
 def test_create_histograme_functions(img:MyImage):
@@ -55,34 +54,6 @@ def test_clustering(img:MyImage):
         images.append(MyImage.new_from_pixels(cluters[i],img.mode,img.width,img.height))
     MyImage.show_images(images)
 
-
-"""def test_imp_gaussian(img:MyImage):
-    k = 11
-    img.show_image()
-    start = time.time()
-    imp = img.gaussian_filter_imp(k,20)
-    end = time.time()
-    print(f"improved gaussian filter = {end - start}")
-    start = time.time()
-    old = img.gaussian_filter(k,20)
-    end = time.time()
-    print(f"old gaussian filter = {end - start}")
-    MyImage.show_images([old,imp])"""
-
-
-"""def test_imp_mean(img:MyImage):
-    s = 51
-    img.show_image()
-    start = time.time()
-    imp = img.mean_filter_imp(s)
-    end = time.time()
-    print(f"improved mean filter = {end - start}")
-    start = time.time()
-    old = img.mean_filter(s)
-    end = time.time()
-    print(f"old mean filter = {end - start}")
-    MyImage.show_images([old,imp])"""
-
 def test_median_filter(img:MyImage):
     s = 11
     MyImage.show_images([img.median_filter(s),img])
@@ -105,19 +76,8 @@ def test_binary_taging(img:MyImage):
     img_to_tag.binary_tagging().show_image()
 
 
-if __name__ =="__main__":
+if __name__ == "__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).median_filter(11)
-    """start = time.time()
-    imgold = img.edges_detection_prewitt(0)
-    end = time.time()
-    print(f"old edge detection  {end - start}")
-
-    start = time.time()
-    imgimp = img.edges_detection_prewitt_impr(0)
-    end = time.time()
-    print(f"improved edge detection {end - start}")
-
-    MyImage.show_images([imgold,imgimp])"""
     imgs = img.kmean(3)
     for x in imgs:
         MyImage.show_images([x,x.binary_tagging()])

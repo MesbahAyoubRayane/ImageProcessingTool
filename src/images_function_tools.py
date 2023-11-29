@@ -933,8 +933,8 @@ class MyImage:
                     img.g[y,x] = g
                     img.b[y,x] = b
         
-        return img
-                      
+        return img     
+    
     # histogrames
     def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "L":
