@@ -23,6 +23,7 @@ class StackFrame:
         self.args = args
         self._type = _type
 
+
         if self._type == 'o':
             r = self.function(self.img_in,*self.args)
         
@@ -72,49 +73,50 @@ class Application(Window):
             menues[m] = sub_menu
 
         # the Files sub menu
-        menues["Files"].add_command(label='Open Image', command=self.open_image_menu_bare_command)
-        menues["Files"].add_command(label='Save Image', command=self.save_image_menu_bare_command)
+        menues["Files"].add_command(label='Open Image', command=self.open_image_menu_bare_command) # 0 -> 1
+        menues["Files"].add_command(label='Save Image', command=self.save_image_menu_bare_command) # 1 -> 0
         menues["Files"].add_separator()
         menues["Files"].add_command(label='Exit', command=self.exit_menu_bare_command)
 
-        menues["Geometric operations"].add_command(label='Translation', command=self.geometric_operations_translation_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Rotation', command=self.geometric_operations_rotation_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Reflection', command=self.geometric_operations_reflection_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Re-scale', command=self.geometric_operations_rescale_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Cut', command=self.geometric_operatioins_cut_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Past on canvas', command=self.geometric_operatioins_past_on_canvas_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Overlay', command=self.geometric_operatioins_overlay_menu_bare_command)
+        menues["Geometric operations"].add_command(label='Translation', command=self.geometric_operations_translation_menu_bare_command) # 1 -> 1
+        menues["Geometric operations"].add_command(label='Rotation', command=self.geometric_operations_rotation_menu_bare_command) # 1 -> 1
+        menues["Geometric operations"].add_command(label='Reflection', command=self.geometric_operations_reflection_menu_bare_command) # 1 -> 1
+        menues["Geometric operations"].add_command(label='Re-scale', command=self.geometric_operations_rescale_menu_bare_command) # 1 -> 1
+        menues["Geometric operations"].add_command(label='Cut', command=self.geometric_operatioins_cut_menu_bare_command) # 1 -> 1
+        menues["Geometric operations"].add_command(label='Past on canvas', command=self.geometric_operatioins_past_on_canvas_menu_bare_command) # 1 -> 1
+        menues["Geometric operations"].add_command(label='Overlay', command=self.geometric_operatioins_overlay_menu_bare_command) # n -> 1
 
-        menues["Photometric operation"].add_command(label='Gray scale', command=self.photometric_operation_gray_scale_menu_bare_command)
-        menues["Photometric operation"].add_command(label='Resolution under-scaling', command=None)
+        menues["Photometric operation"].add_command(label='Gray scale', command=self.photometric_operation_gray_scale_menu_bare_command) # 1 -> 1
+        menues["Photometric operation"].add_command(label='Resolution under-scaling', command=self.photometric_operation_resolution_under_scaling) # 1 -> 1
 
-        menues["Filters"].add_command(label='Mean', command=None)
-        menues["Filters"].add_command(label='Gaussian', command=None)
-        menues["Filters"].add_command(label='Bilateral', command=None)
-        menues["Filters"].add_command(label='Median', command=None)
-        menues["Filters"].add_command(label='Lablacian', command=None)
+        menues["Filters"].add_command(label='Mean', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Gaussian', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Bilateral', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Median', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Lablacian', command=None) # 1 -> 1
 
-        menues["Histogram based operations"].add_command(label='Translation', command=None)
-        menues["Histogram based operations"].add_command(label='Inverse', command=None)
-        menues["Histogram based operations"].add_command(label='Dynamic expansion', command=None)
-        menues["Histogram based operations"].add_command(label='Equalization', command=None)
-        menues["Histogram based operations"].add_command(label='Histogram matching', command=None)
+        menues["Histogram based operations"].add_command(label='Translation', command=self.histogram_based_operations_translation_menu_bare_command) # 1 -> 1
+        menues["Histogram based operations"].add_command(label='Inverse', command=self.histograme_based_operations_inverse_menu_bare_command) # 1 -> 1
+        menues["Histogram based operations"].add_command(label='Dynamic expansion', command=self.histograme_based_operations_dynamic_expansion_menu_bare_command) # 1 -> 1
+        menues["Histogram based operations"].add_command(label='Equalization', command=self.histogram_based_operations_equalization_menu_bare_command) # 1 -> 1
+        menues["Histogram based operations"].add_command(label='Histogram matching', command=self.histogram_based_operations_histogram_matching_menu_bare_command) # 2 -> 1 TODO
 
-        menues["Segmentation"].add_command(label='Clustering', command=None)
-        menues["Segmentation"].add_command(label='Tagging', command=None)
-        menues["Segmentation"].add_command(label='Edge detection', command=None)
+        menues["Segmentation"].add_command(label='Object detection', command=None) # 1 -> n 
+        menues["Segmentation"].add_command(label='Edge detection', command=None) # 1 -> 1
 
-        menues["Statistical constants"].add_command(label='Mean', command=None)
-        menues["Statistical constants"].add_command(label='Std', command=None)
-        menues["Statistical constants"].add_command(label='Variance', command=None)
-        menues["Statistical constants"].add_command(label='Median', command=None)
-        menues["Statistical constants"].add_command(label='Outliers', command=None)
+        menues["Statistical constants"].add_command(label='Mean', command=None) # 1 -> 0
+        menues["Statistical constants"].add_command(label='Std', command=None) # 1 -> 0
+        menues["Statistical constants"].add_command(label='Variance', command=None) # 1 -> 0
+        menues["Statistical constants"].add_command(label='Median', command=None) # 1 -> 0
+        menues["Statistical constants"].add_command(label='Outliers', command=None) # 1 -> 0
 
-        menues["Visualization"].add_command(label='Show Image', command=self.visualization_show_menu_bare_command)
-        menues["Visualization"].add_command(label='Show Histogram', command=None)
-        menues["Visualization"].add_command(label='Show Normalized Histogram', command=None)
-        menues["Visualization"].add_command(label='Show Cumulative Histogram', command=None)
-        menues["Visualization"].add_command(label='Show Cumulative Normalized Histogram', command=None)
+
+        menues["Visualization"].add_command(label='Show Image', command=self.visualization_show_menu_bare_command) # 1 -> 0
+        menues["Visualization"].add_command(label='Show Histogram', command=None) # 1 -> 0
+        menues["Visualization"].add_command(label='Show Normalized Histogram', command=None) # 1 -> 0
+        menues["Visualization"].add_command(label='Show Cumulative Histogram', command=None) # 1 -> 0
+        menues["Visualization"].add_command(label='Show Cumulative Normalized Histogram', command=None) # 1 -> 0
+        menues["Visualization"].add_command(label='Show Dimensions', command=None) # 1 -> 0
 
     def __create_operations_stack__(self):
         self.operation_stack_tree_view = ttk.Treeview(master=self, columns=('N°', 'Operation', 'Args'), show='headings')
@@ -475,7 +477,144 @@ class Application(Window):
 
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.gray_scale,(),'o'))
         self.redraw_operation_stack_tree_view()
+    
+    def photometric_operation_resolution_under_scaling(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        factor = simpledialog.askinteger("FACTOR","ENTER THE FACTOR BETWEEN 2<= factor <256,NOTE : FACTOR MUST divide 256")
+        if factor is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if not (2<=factor<256):
+            messagebox.showerror('ERROR',"THE FACTOR MUST BE BETWEEN 2<= factor <256")
+            return
+        if 256 % factor != 0:
+            messagebox.showerror('ERROR',"FACTOR MUST divide 256")
+            return
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.resolution_underscaling,(factor,),'o'))
+        self.redraw_operation_stack_tree_view()
+
+
+    # Histogram based operations
+    def histogram_based_operations_translation_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
         
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        shift = simpledialog.askinteger("SHIFT AMOUNT","ENTER THE SHIFT VALUE")
+        if shift is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.histo_translation,(shift,),'o'))
+        self.redraw_operation_stack_tree_view()
+
+    def histograme_based_operations_inverse_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.histo_inverse,(),'o'))
+        self.redraw_operation_stack_tree_view()
+    
+    def histograme_based_operations_dynamic_expansion_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.histo_expansion_dynamique,(),'o'))
+        self.redraw_operation_stack_tree_view()
+    
+    def histogram_based_operations_equalization_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.histo_equalisation,(),'o'))
+        self.redraw_operation_stack_tree_view()
+
+    def histogram_based_operations_histogram_matching_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        # selecting the modle
+        path = filedialog.askopenfilename()
+        if path is None or path == '':
+            messagebox.showerror('ERROR',"THE OPERATION WAS CANCELLED")
+            return
+        path = path.strip()
+
+        if not any([path.endswith(ext) for ext in ['.jpeg',".png",".jpg"]]):
+            x = ['.jpeg',".png",".jpg"]
+            messagebox.showerror("ERROR",f"CHOOSE AN IMAGE OF TYPE {x}")
+            return
+        mdl = ift.MyImage.open_image_as_rgb_matrices(path)
+        if input_imgs.mode == "L":
+            mdl = mdl.gray_scale()
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.histo_matching,(mdl,),'o'))
+        self.redraw_operation_stack_tree_view()
 
     # VISUALISATION
     def visualization_show_menu_bare_command(self):

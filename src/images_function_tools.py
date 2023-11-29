@@ -269,6 +269,8 @@ class MyImage:
             MAX = self.r.flatten().max()
             gray = np.array((self.r.flatten().astype(np.float64) - MIN )* (255/(MAX-MIN)),dtype=np.uint8).reshape(self.r.shape)
             return MyImage(gray,gray,gray,self.mode)
+        else:
+            raise Exception(f"{self.mode} is not supported")
 
     def histo_equalisation(self):
         """ use the cumulative histograme to improve contraste"""
@@ -286,31 +288,21 @@ class MyImage:
 
     def histo_matching(self,model):
         """use an image as a model for another image"""
-        if isinstance(model,MyImage):
-            if self.mode != model.mode:
-                raise ValueError("The selected image model doesn't have the samel mode as the modeled image")
-            cpyimg = self.copy()
-            if self.mode == "L":
-                cnh_model:np.ndarray = model.cumulative_normilized_histo()
-                for x,y,v in self.pixels():
-                    cpyimg[x,y] = int(255 * cnh_model[v])
-        
-            elif self.mode == "RGB":
-                cnh_model_r,cnh_model_g,cnh_model_b = model.cumulative_normilized_histo()
-                for x,y,r,g,b in self.pixels():
-                    cpyimg[x,y] = (int(255*cnh_model_r[r]),int(cnh_model_g[g]),int(cnh_model_b[b]))
-        elif isinstance(model,np.ndarray):
-            cpyimg = self.copy()
-            if self.mode == "L":
-                cnh_model = model
-                for x,y,v in self.pixels():
-                    cpyimg[x,y] = int(255 * cnh_model[v])
-        
-            elif self.mode == "RGB":
-                cnh_model_r,cnh_model_g,cnh_model_b = model.cumulative_normilized_histo()
-                for x,y,r,g,b in self.pixels():
-                    cpyimg[x,y] = (int(255*cnh_model_r[r]),int(cnh_model_g[g]),int(cnh_model_b[b]))
- 
+        if self.mode != model.mode:
+            raise ValueError("The selected image model doesn't have the samel mode as the modeled image")
+        cpyimg = MyImage.new(self.width,self.height,self.mode)
+        if self.mode == "L":
+            cnh_model:np.ndarray = model.cumulative_normilized_histo()
+            for x,y,v in self.pixels():
+                cpyimg[x,y] = int(255 * cnh_model[v])
+    
+        elif self.mode == "RGB":
+            cnh_model_r,cnh_model_g,cnh_model_b = model.cumulative_normilized_histo()
+            for x,y,r,g,b in self.pixels():
+                cpyimg[x,y] = (int(255*cnh_model_r[r]),int(255*cnh_model_g[g]),int(255*cnh_model_b[b]))
+
+        else:
+            raise Exception(f"{self.mode} is not supported")
         return cpyimg    
 
     # filters
