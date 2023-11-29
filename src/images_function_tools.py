@@ -7,7 +7,7 @@ class MyImage:
     A class containging all the functions learned in the image processing class:
     support two types of images 'RGB' an 'L' (gray scale)
     """
-    MODES = ('RGB','L') 
+    MODES = 'RGB','L'
     DEFAUL_GRAY_SCALE_COEF = (0.299,0.587,0.114) # this are the deafults values for transforming from rgb to gray scale
 
     def __init__(self,r:np.ndarray,g:np.ndarray,b:np.ndarray,mode:str):
