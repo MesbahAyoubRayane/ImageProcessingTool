@@ -71,8 +71,7 @@ class MyImage:
         elif self.mode.upper() == 'L':
             if isinstance(value,tuple) or isinstance(value,list):
                 value = value[0]
-            if not isinstance(value,int):
-                raise ValueError(f"the provided value is not an integer v={value}")
+            value = int(value)
             if not 0<=value<256:
                 raise ValueError('RGB values must be between 0 and 255 inclusive')
             self.r[y,x],self.g[y,x],self.b[y,x] = value,value,value
@@ -197,8 +196,28 @@ class MyImage:
         return scaled_img
     
     def resolution_underscaling(self,factor:int):
+        """
+        this function divide the range of each chanel into X bages and affect the mean of each bag to the colors laying inside the range
+        exemple:
+        factor = 32
+        [0:32] [32:64] ... [224:256]
+        each pixel laying between 0 and 32 will have the value (0+32)/2
+        """
         # continfication
-        raise NotImplementedError()
+        factor = int(factor)
+        if not (0<factor<256): raise ValueError(f'the factor must bet 0<factor<256 but factor = {factor}')
+        if 256 % factor != 0 : raise ValueError(f"256 must be divisibale by fcator but 256 % {factor} != 0")
+        
+        img = MyImage.new(self.width,self.height,self.mode)
+        backets = {i//factor:(i+factor + i)//2 for i in range(0,256,factor)}
+        def f(x): return backets[x]
+        f = np.vectorize(f)
+        
+        img.r =f((self.r.flatten() / factor).astype(np.uint32)).astype(np.uint8).reshape(self.r.shape)
+        img.g =f((self.g.flatten() / factor).astype(np.uint32)).astype(np.uint8).reshape(self.g.shape)
+        img.b =f((self.b.flatten() / factor).astype(np.uint32)).astype(np.uint8).reshape(self.b.shape)
+
+        return img
 
     # histogram based operations
     def histo_translation(self,t:int):
@@ -821,14 +840,6 @@ class MyImage:
                 for k,v in new_clusters.items():
                     clusters[mean_rgb(v)] = v
 
-            r = []
-            for v in clusters.values():
-                rr = []
-                for p in v:
-                    rr.append((p[0],p[1],*self[p[0],p[1]]))
-                r.append(rr)
-            return r
-
         elif self.mode == 'L':
             clusters:dict[tuple[int|float],list[tuple[int,int]]] = {}
             
@@ -863,17 +874,32 @@ class MyImage:
                 clusters = {}
                 for k,v in new_clusters.items():
                     clusters[mean_l(v)] = v
-
-            r = []
-            for v in clusters.values():
-                rr = []
-                for p in v:
-                    rr.append((p[0],p[1],*self[p[0],p[1]]))
-                r.append(rr)
-            return r
         else:
             raise ValueError(f"{self.mode} is not suppotred")
-
+        
+        sub_imgs:list[MyImage] = []
+        if self.mode == "RGB":
+            for k,v in clusters.items():
+                img = MyImage.new(self.width,self.height,self.mode)
+                if k == (0,0,0):
+                    k = np.random.randint(0,256),np.random.randint(0,256),np.random.randint(0,256)
+                
+                for p in v:
+                    img[p] = k
+                
+                sub_imgs.append(img)
+        
+        elif self.mode =='L':
+            for k,v in clusters.items():
+                img = MyImage.new(self.width,self.height,self.mode)
+                if k == 0:
+                    k = np.random.randint(0,256)
+                for p in v:
+                    img[p] = k
+                
+                sub_imgs.append(img)
+        return sub_imgs
+        
     # TODO this function needs a better integration wioth other functions
     def binary_tagging(self):
         def get_neighbores(x:int,y:int): return [(i,j) for i in (x,x+1,x-1) for j in (y,y-1,y+1)]

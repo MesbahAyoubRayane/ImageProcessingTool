@@ -106,8 +106,8 @@ def test_binary_taging(img:MyImage):
 
 
 if __name__ =="__main__":
-    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).gray_scale().median_filter(5).gaussian_filter(3,8)
-    start = time.time()
+    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).median_filter(11)
+    """start = time.time()
     imgold = img.edges_detection_prewitt(0)
     end = time.time()
     print(f"old edge detection  {end - start}")
@@ -117,4 +117,8 @@ if __name__ =="__main__":
     end = time.time()
     print(f"improved edge detection {end - start}")
 
-    MyImage.show_images([imgold,imgimp])
+    MyImage.show_images([imgold,imgimp])"""
+    imgs = img.kmean(3)
+    for x in imgs:
+        MyImage.show_images([x,x.binary_tagging()])
+    #img.resolution_underscaling(32).show_image()
