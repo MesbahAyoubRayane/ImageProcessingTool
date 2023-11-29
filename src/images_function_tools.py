@@ -149,7 +149,6 @@ class MyImage:
 
         return cpy_img
 
-
     def reflecte(self,axe:str):
         """
         mirrore the image on the horizantal or vertical axe
@@ -619,8 +618,12 @@ class MyImage:
             raise ValueError(f"{self.mode} is not supported")
     
     def laplacian_sharpning_filter(self,distance:str,size:int):
+        """
+        distance must be on of these variants : manhatten,max
+        size : is an odd positive number
+        """
         size = int(size)
-        if size <= 0:raise ValueError('size must be > 0')
+        if size < 2:raise ValueError('size must be > 2')
         if size % 2 == 0:raise ValueError('size must be odd number')
 
         distance = distance.lower().strip()
@@ -634,11 +637,11 @@ class MyImage:
             kernel[size//2,size//2] = -(kernel.sum() - 1) 
         else:
             raise ValueError("distance must be 4 or 8")
-        kernel = kernel.reshape((1,3,3))
+        kernel = kernel.reshape((1,size,size))
 
-        r_pad = np.pad(self.r,1,'reflect')
-        g_pad = np.pad(self.g,1,'reflect')
-        b_pad = np.pad(self.b,1,'reflect')
+        r_pad = np.pad(self.r,size//2,'reflect')
+        g_pad = np.pad(self.g,size//2,'reflect')
+        b_pad = np.pad(self.b,size//2,'reflect')
         copy_img = MyImage.new(self.width,self.height,self.mode)
         r_bag = np.array(
             [r_pad[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
@@ -661,9 +664,7 @@ class MyImage:
         copy_img.b = np.clip((b_bag * kernel).sum(axis=(1,2)),0,255).astype(np.uint8).reshape(self.r.shape)
 
         return copy_img
-        
-
-
+    
     def edge_detection_robert(self,threshold:int):
         kernel_diag = np.array([[-1,0],[0,1]]).reshape((1,2,2))
         kernel_rev_diag = np.array([[0,-1],[1,0]]).reshape((1,2,2))
