@@ -1092,7 +1092,26 @@ class MyImage:
         elif self.mode == "L":
             return np.median(self.r.flatten())
     
-    
+    def index(self) -> np.ndarray:
+        if self.mode == 'RGB':
+            A,B,C = self.normilized_histograme()
+            a,b,c = self.cut(0,0,self.width//2,self.height//2).normilized_histograme()
+            d,e,f = self.cut(self.width//2,0,self.width//2,self.height//2).normilized_histograme()
+            g,h,i = self.cut(0,self.height//2,self.width//2,self.height//2).normilized_histograme()
+            j,k,l = self.cut(self.width//2,self.height//2,self.width//2,self.height//2).normilized_histograme()
+        
+        elif self.mode == 'L':
+            A = B = C = self.normilized_histograme()
+            a = b = c = self.cut(0,0,self.width//2,self.height//2).normilized_histograme()
+            d = e = f = self.cut(self.width//2,0,self.width//2,self.height//2).normilized_histograme()
+            g = h = i = self.cut(0,self.height//2,self.width//2,self.height//2).normilized_histograme()
+            j = k = l = self.cut(self.width//2,self.height//2,self.width//2,self.height//2).normilized_histograme()
+        
+        else:
+            raise Exception(f"{self.mode} is not supported")
+        
+        return np.concatenate([A,B,C,a,b,c,d,e,f,g,h,i,j,k,l])
+
     # static functions
     @staticmethod
     def new(w:int,h:int,mode:str):

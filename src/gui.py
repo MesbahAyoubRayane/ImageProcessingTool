@@ -80,16 +80,13 @@ class Application(Window):
         menues["Visualization"].add_command(label='Show Cumulative Normalized Histogram', command=None)
 
     def __create_operations_stack__(self):
-        columns =  ('FN','AGRS')
-        self.operation_stack_tree_view = ttk.Treeview(self)
-        self.operation_stack_tree_view['columns'] = columns
+        self.operation_stack_tree_view = ttk.Treeview(master=self, columns=('N°', 'Operation', 'Args'), show='headings')
 
-        self.operation_stack_tree_view.heading("#0",text="N°")
-        for x in columns: self.operation_stack_tree_view.heading(x,text=x)
+        self.operation_stack_tree_view.heading('N°', text='N°')
+        self.operation_stack_tree_view.heading('Operation', text='Operation')
+        self.operation_stack_tree_view.heading('Args', text='Args')
 
-        self.operation_stack_tree_view.insert("","end",text="blacla",values=columns)
-
-        self.operation_stack_tree_view.pack(expand=True,fill=tk.BOTH)
+        self.operation_stack_tree_view.pack(expand=True, fill=tk.BOTH)
     def run(self):
         self.mainloop()
 
