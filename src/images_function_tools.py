@@ -582,70 +582,6 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not supported")
     
-    # TODO you need to normilize the gradiant before testing the threshold
-    def edges_detection_prewit(self, threshold: int):
-        """
-        threshold is an integer between 0 and 255
-        """
-        threshold = int(threshold)
-        if threshold < 0 or threshold > 255:
-            raise ValueError(f"threshold must be between 0 and 255")
-        kernel1 = np.full(shape=(3, 3), fill_value=0)
-        kernel1[:, 0] = -1
-        kernel1[:, -1] = 1
-
-        kernel2 = np.full(shape=(3, 3), fill_value=0)
-        kernel2[0, :] = -1
-        kernel2[-1, :] = 1
-
-        size = 3
-
-        # Pad the input image using NumPy
-        extended_r = np.pad(self.r, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
-        extended_g = np.pad(self.g, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
-        extended_b = np.pad(self.b, ((size // 2, size // 2), (size // 2, size // 2)), 'reflect')
-
-        # Create a new image to store the processed data
-        segmented_img = self.copy()
-
-        for x in range(size // 2, self.width - size // 2):
-            for y in range(size // 2, self.height - size // 2):
-                r_patch = extended_r[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
-                g_patch = extended_g[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
-                b_patch = extended_b[y - size // 2:y + size // 2 + 1, x - size // 2:x + size // 2 + 1]
-
-                # Apply the Gaussian filter using element-wise operations (Convolution)
-                r_i = np.sum(r_patch * kernel1)
-                g_i = np.sum(g_patch * kernel1)
-                b_i = np.sum(b_patch * kernel1)
-
-                r_j = np.sum(r_patch * kernel2)
-                g_j = np.sum(g_patch * kernel2)
-                b_j = np.sum(b_patch * kernel2)
-
-                # Calculate the magnitude of the gradients
-                Gr_new = np.sqrt(np.square(r_i) + np.square(r_j))
-                Gg_new = np.sqrt(np.square(g_i) + np.square(g_j))
-                Gb_new = np.sqrt(np.square(b_i) + np.square(b_j))
-
-                # Apply thresholding
-                if Gr_new > threshold:
-                    segmented_img.r[y, x] = 255
-                else:
-                    segmented_img.r[y, x] = 0
-
-                if Gg_new > threshold:
-                    segmented_img.g[y, x] = 255
-                else:
-                    segmented_img.g[y, x] = 0
-
-                if Gb_new > threshold:
-                    segmented_img.b[y, x] = 255
-                else:
-                    segmented_img.b[y, x] = 0
-
-        return segmented_img
-    
     def edge_detection_robert(self,threshold:int):
         kernel_diag = np.array([[-1,0],[0,1]]).reshape((1,2,2))
         kernel_rev_diag = np.array([[0,-1],[1,0]]).reshape((1,2,2))
@@ -655,7 +591,6 @@ class MyImage:
         extended_b = np.pad(self.b,pad_width=1,mode='reflect')
 
         W,H = self.width,self.height
-        if not (W > 0 and H > 0):raise ValueError('the image is very small')
 
         bage_r = np.array([
             extended_r[y:y+2,x:x+2]
@@ -699,10 +634,131 @@ class MyImage:
 
         return MyImage(G_r,G_g,G_b,self.mode)
     
-    # TODO
     def edge_detection_sobel(self,threshold:int):
-        ...
-    
+        """
+        threshold is an integer value between 0 and 255 , the lower it is the more daitaills will be detected as an edge
+        """
+        kernel_h = np.array([
+            [-1,0,1],
+            [-2,0,2],
+            [-1,0,1]
+        ]).reshape((1,3,3))
+        kernel_v = np.array([
+            [-1,-2,-1],
+            [0,0,0],
+            [1,2,1]
+        ]).reshape((1,3,3))
+
+        W,H = self.width,self.height
+
+        extended_r = np.pad(self.r,1,'reflect')
+        extended_g = np.pad(self.g,1,'reflect')
+        extended_b = np.pad(self.b,1,'reflect')
+        # creating the bags
+        bage_r = np.array([
+            extended_r[y-1:y+2,x-1:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        bage_g = np.array([
+            extended_g[y-1:y+2,x-1:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        bage_b = np.array([
+            extended_b[y-1:y+2,x-1:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        G_r_h = (bage_r * kernel_h).sum(axis=(1,2))
+        G_r_v = (bage_r * kernel_v).sum(axis=(1,2))
+        G_g_h = (bage_g * kernel_h).sum(axis=(1,2))
+        G_g_v = (bage_g * kernel_v).sum(axis=(1,2))
+        G_b_h = (bage_b * kernel_h).sum(axis=(1,2))
+        G_b_v = (bage_b * kernel_v).sum(axis=(1,2))
+
+        G_r = np.sqrt(G_r_h ** 2 + G_r_v ** 2)
+        G_g = np.sqrt(G_g_h ** 2 + G_g_v ** 2)
+        G_b = np.sqrt(G_b_h ** 2 + G_b_v ** 2)
+
+        # normilizing the gradiants from 0..255
+        G_r = (G_r - G_r.min())/(G_r.max() - G_r.min()) * 255
+        G_g = (G_g - G_g.min())/(G_g.max() - G_g.min()) * 255
+        G_b = (G_b - G_b.min())/(G_b.max() - G_b.min()) * 255
+        
+        f = np.vectorize(lambda x:255 if x > threshold else 0)
+        G_r:np.ndarray = f(G_r)
+        G_g:np.ndarray = f(G_g)
+        G_b:np.ndarray = f(G_b)
+
+        G_r = G_r.astype(np.uint8).reshape(self.r.shape)
+        G_g = G_g.astype(np.uint8).reshape(self.r.shape)
+        G_b = G_b.astype(np.uint8).reshape(self.r.shape)
+
+        return MyImage(G_r,G_g,G_b,self.mode)
+
+    def edges_detection_prewitt(self,threshold:int):
+        """
+        threshold is an integer value between 0 and 255 , the lower it is the more daitaills will be detected as an edge
+        """
+        kernel_h = np.array([
+            [-1,0,1],
+            [-1,0,1],
+            [-1,0,1]
+        ]).reshape((1,3,3))
+        kernel_v = np.array([
+            [-1,-1,-1],
+            [0,0,0],
+            [1,1,1]
+        ]).reshape((1,3,3))
+
+        W,H = self.width,self.height
+
+        extended_r = np.pad(self.r,1,'reflect')
+        extended_g = np.pad(self.g,1,'reflect')
+        extended_b = np.pad(self.b,1,'reflect')
+        # creating the bags
+        bage_r = np.array([
+            extended_r[y-1:y+2,x-1:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        bage_g = np.array([
+            extended_g[y-1:y+2,x-1:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        bage_b = np.array([
+            extended_b[y-1:y+2,x-1:x+2]
+            for y in range(1,H+1)
+            for x in range(1,W+1)
+        ])
+        G_r_h = (bage_r * kernel_h).sum(axis=(1,2))
+        G_r_v = (bage_r * kernel_v).sum(axis=(1,2))
+        G_g_h = (bage_g * kernel_h).sum(axis=(1,2))
+        G_g_v = (bage_g * kernel_v).sum(axis=(1,2))
+        G_b_h = (bage_b * kernel_h).sum(axis=(1,2))
+        G_b_v = (bage_b * kernel_v).sum(axis=(1,2))
+
+        G_r = np.sqrt(G_r_h ** 2 + G_r_v ** 2)
+        G_g = np.sqrt(G_g_h ** 2 + G_g_v ** 2)
+        G_b = np.sqrt(G_b_h ** 2 + G_b_v ** 2)
+
+        # normilizing the gradiants from 0..255
+        G_r = (G_r - G_r.min())/(G_r.max() - G_r.min()) * 255
+        G_g = (G_g - G_g.min())/(G_g.max() - G_g.min()) * 255
+        G_b = (G_b - G_b.min())/(G_b.max() - G_b.min()) * 255
+        
+        f = np.vectorize(lambda x:255 if x > threshold else 0)
+        G_r:np.ndarray = f(G_r)
+        G_g:np.ndarray = f(G_g)
+        G_b:np.ndarray = f(G_b)
+
+        G_r = G_r.astype(np.uint8).reshape(self.r.shape)
+        G_g = G_g.astype(np.uint8).reshape(self.r.shape)
+        G_b = G_b.astype(np.uint8).reshape(self.r.shape)
+
+        return MyImage(G_r,G_g,G_b,self.mode)
     # clustering algorithms
     def kmean(self,k:int):
         def mean_rgb(v:list[tuple[int,int]]):
