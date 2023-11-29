@@ -94,16 +94,15 @@ class MyImage:
         x,y = self.__test_indecies__(x,y)
 
         w,h = int(w),int(h)
-        if w <= 0 or h <= 0:
-            raise ValueError(f"the width and height must be a positive value , w = {w},h = {h}")
-        
-        tmp = np.zeros(w * h).reshape((h,w))
-        rimg = MyImage(tmp,tmp,tmp,self.mode)
-        for _x in range(w):
-            for _y in range(h):
-                if 0<=_x<self.width and 0<=_y<self.height:
-                    rimg[_x,_y] = self[x+_x,y+_y]
-        return rimg 
+        if w <= 0 or h <= 0: raise ValueError(f"the width and height must be a positive value , w = {w},h = {h}")
+        rimg =MyImage.new(w,h,self.mode)
+
+        for xn in range(w):
+            for yn in range(h):
+                if x+xn < self.width and y+yn < self.height:
+                    rimg[xn,yn] = self[xn+x,yn+y]
+                
+        return rimg
 
     # Geometric transformation
     def translation(self,vec:tuple[float|int,float|int]):
@@ -619,6 +618,52 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not supported")
     
+    def laplacian_sharpning_filter(self,distance:str,size:int):
+        size = int(size)
+        if size <= 0:raise ValueError('size must be > 0')
+        if size % 2 == 0:raise ValueError('size must be odd number')
+
+        distance = distance.lower().strip()
+        if distance == 'manhatten':
+            kernel = np.zeros((size,size))
+            kernel[size//2,:] = 1
+            kernel[:,size//2] = 1
+            kernel[size//2,size//2] = -(kernel.sum() - 1) 
+        elif distance == "max":
+            kernel = np.ones((size,size))
+            kernel[size//2,size//2] = -(kernel.sum() - 1) 
+        else:
+            raise ValueError("distance must be 4 or 8")
+        kernel = kernel.reshape((1,3,3))
+
+        r_pad = np.pad(self.r,1,'reflect')
+        g_pad = np.pad(self.g,1,'reflect')
+        b_pad = np.pad(self.b,1,'reflect')
+        copy_img = MyImage.new(self.width,self.height,self.mode)
+        r_bag = np.array(
+            [r_pad[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+            for y in range(size//2,self.height+size//2)
+            for x in range(size//2,self.width+size//2)]
+        )
+        g_bag = np.array(
+            [g_pad[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+            for y in range(size//2,self.height+size//2)
+            for x in range(size//2,self.width+size//2)]
+        )
+        b_bag = np.array(
+            [b_pad[y - size //2 :y + size//2 + 1, x - size//2: x + size//2 +1]
+            for y in range(size//2,self.height+size//2)
+            for x in range(size//2,self.width+size//2)]
+        )
+
+        copy_img.r = np.clip((r_bag * kernel).sum(axis=(1,2)),0,255).astype(np.uint8).reshape(self.r.shape)
+        copy_img.g = np.clip((g_bag * kernel).sum(axis=(1,2)),0,255).astype(np.uint8).reshape(self.r.shape)
+        copy_img.b = np.clip((b_bag * kernel).sum(axis=(1,2)),0,255).astype(np.uint8).reshape(self.r.shape)
+
+        return copy_img
+        
+
+
     def edge_detection_robert(self,threshold:int):
         kernel_diag = np.array([[-1,0],[0,1]]).reshape((1,2,2))
         kernel_rev_diag = np.array([[0,-1],[1,0]]).reshape((1,2,2))
@@ -917,8 +962,7 @@ class MyImage:
                 
                 sub_imgs.append(img)
         return sub_imgs
-        
-    # TODO this function needs a better integration wioth other functions
+    
     def binary_tagging(self):
         def get_neighbores(x:int,y:int): return [(i,j) for i in (x,x+1,x-1) for j in (y,y-1,y+1)]
         m:np.ndarray =np.zeros(self.r.shape)
