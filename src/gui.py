@@ -89,10 +89,10 @@ class Application(Window):
         menues["Photometric operation"].add_command(label='Gray scale', command=self.photometric_operation_gray_scale_menu_bare_command) # 1 -> 1
         menues["Photometric operation"].add_command(label='Resolution under-scaling', command=self.photometric_operation_resolution_under_scaling) # 1 -> 1
 
-        menues["Filters"].add_command(label='Mean', command=None) # 1 -> 1
-        menues["Filters"].add_command(label='Gaussian', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Mean', command=self.filters_mean_menu_bare_command) # 1 -> 1
+        menues["Filters"].add_command(label='Gaussian', command=self.filters_gaussian_menu_bare_command) # 1 -> 1
         menues["Filters"].add_command(label='Bilateral', command=None) # 1 -> 1
-        menues["Filters"].add_command(label='Median', command=None) # 1 -> 1
+        menues["Filters"].add_command(label='Median', command=self.filters_median_menu_bare_command) # 1 -> 1
         menues["Filters"].add_command(label='Lablacian', command=None) # 1 -> 1
 
         menues["Histogram based operations"].add_command(label='Translation', command=self.histogram_based_operations_translation_menu_bare_command) # 1 -> 1
@@ -122,11 +122,8 @@ class Application(Window):
         self.operation_stack_tree_view.pack(expand=True, fill=tk.BOTH)
     
     def __create_buttons__(self):
-        self.undo_btn = ttk.Button(self,text="Undo",command=None)
-        self.dlt_btn = ttk.Button(self,text="Discard",command=None,bootstyle="danger") 
-
+        self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command,bootstyle="danger")
         self.dlt_btn.pack(fill=tk.BOTH,padx=5,pady=3)
-        self.undo_btn.pack(fill=tk.BOTH,padx=5,pady=3)
 
     def run(self):
         self.mainloop()
@@ -612,6 +609,103 @@ class Application(Window):
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.histo_matching,(mdl,),'o'))
         self.redraw_operation_stack_tree_view()
 
+    # Filter
+    def filters_mean_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        size = simpledialog.askinteger("MEAN FILTER SIZE","ENTER THE SIZE OF THE MEAN FILTER KERNEL")
+        if size is None:
+            messagebox.showerror("ERROR","THE OPERATION WAS CANCELLED")
+            return
+        if size <= 0:
+            messagebox.showerror('ERROR',"SIZE OF THE MEAN FILTER KERNEL MUST BE POSITIVE")
+            return
+        if size % 2 == 0:
+            messagebox.showerror('ERROR',"MEAN FILTER KERNEL MUST HAVE AN ODD SIZE")
+            return
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.mean_filter,(size,),'o'))
+        self.redraw_operation_stack_tree_view()
+
+    def filters_gaussian_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        size = simpledialog.askinteger("GAUSSIAN FILTER SIZE","ENTER THE SIZE OF THE GAUSSIAN FILTER KERNEL")
+        if size is None:
+            messagebox.showerror("ERROR","THE OPERATION WAS CANCELLED")
+            return
+        if size <= 0:
+            messagebox.showerror('ERROR',"SIZE OF THE GAUSSIAN FILTER KERNEL MUST BE POSITIVE")
+            return
+        if size % 2 == 0:
+            messagebox.showerror('ERROR',"GAUSSIAN FILTER KERNEL MUST HAVE AN ODD SIZE")
+            return
+        
+        std = simpledialog.askfloat("STANDARE DEVIATION","ENTER THE VALUE OF THE STANDAR DEVIATIONS")
+        if std is None:
+            messagebox.showerror('ERROR',"OPERATION WAS CANCELLED")
+            return
+        if std <= 0:
+            messagebox.showerror("ERROR","STANDAR DEVIATION MUST BE POSITIVE")
+            return
+        
+
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.gaussian_filter,(size,std),'o'))
+        self.redraw_operation_stack_tree_view()
+
+    def filters_median_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        size = simpledialog.askinteger("MEDIAN FILTER SIZE","ENTER THE SIZE OF THE MEDIAN FILTER KERNEL")
+        if size is None:
+            messagebox.showerror("ERROR","THE OPERATION WAS CANCELLED")
+            return
+        if size <= 0:
+            messagebox.showerror('ERROR',"SIZE OF THE MEDIAN FILTER KERNEL MUST BE POSITIVE")
+            return
+        if size % 2 == 0:
+            messagebox.showerror('ERROR',"MEDIAN FILTER KERNEL MUST HAVE AN ODD SIZE")
+            return
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.median_filter,(size,),'o'))
+        self.redraw_operation_stack_tree_view()
+
     # VISUALISATION
     def visualization_show_menu_bare_command(self):
         """
@@ -627,6 +721,18 @@ class Application(Window):
         ift.plt.clf()
         ift.MyImage.show_images(imges)
     
+    # Button
+    def btn_dlt_command(self):
+        selected_images  = self.get_selected_images_by_index()
+        new_operation_stack = []
+        for i,sframe in enumerate(self.operation_stack):
+            if i not in selected_images:
+                new_operation_stack.append(sframe)
+        
+        self.operation_stack = new_operation_stack
+        self.redraw_operation_stack_tree_view()
+        
+    
 
     # useful methods
     def redraw_operation_stack_tree_view(self):
@@ -641,6 +747,13 @@ class Application(Window):
         for i in selected_stack_frames:
             j = int(self.operation_stack_tree_view.item(i)["values"][0])
             imges.extend(self.operation_stack[j].imgs_out)
+        return imges
+    
+    def get_selected_images_by_index(self) -> list[int]:
+        imges = []
+        selected_stack_frames = self.operation_stack_tree_view.selection()
+        for i in selected_stack_frames:
+            imges.append(int(self.operation_stack_tree_view.item(i)["values"][0]))
         return imges
 
 if __name__ == "__main__":
