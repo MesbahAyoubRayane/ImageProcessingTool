@@ -117,7 +117,7 @@ class MyImage:
                 cpy[x_,y_] = v
         return cpy
     
-    def paste(self,new_width:int,new_height:int,upper_left_point:tuple[int,int]):
+    def paste(self,x:int,y:int,new_width:int,new_height:int):
         """
         This function allow you to paste another image on the new image, the new image must be of a larger size
         for it to contain the old image 
@@ -125,10 +125,10 @@ class MyImage:
         if self.width > new_width or self.height > new_height:
             raise ValueError('The image is bigger than the canvas')
         img = MyImage.new(new_width,new_height,self.mode)
-
+        X,Y = x,y
         for x,y,*v in self.pixels():
-            if x+upper_left_point[0] < img.width and y + upper_left_point[1] < img.height:
-                img[x+upper_left_point[0],y+upper_left_point[1]] = v if self.mode == 'RGB' else v[0]
+            if x+X < img.width and y +Y < img.height:
+                img[x+X,y+Y] = v
             
         return img  
     

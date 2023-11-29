@@ -81,11 +81,11 @@ class Application(Window):
         menues["Geometric operations"].add_command(label='Rotation', command=self.geometric_operations_rotation_menu_bare_command)
         menues["Geometric operations"].add_command(label='Reflection', command=self.geometric_operations_reflection_menu_bare_command)
         menues["Geometric operations"].add_command(label='Re-scale', command=self.geometric_operations_rescale_menu_bare_command)
-        menues["Geometric operations"].add_command(label='Cut', command=None)
-        menues["Geometric operations"].add_command(label='Past on canvas', command=None)
-        menues["Geometric operations"].add_command(label='Overlay', command=None)
+        menues["Geometric operations"].add_command(label='Cut', command=self.geometric_operatioins_cut_menu_bare_command)
+        menues["Geometric operations"].add_command(label='Past on canvas', command=self.geometric_operatioins_past_on_canvas_menu_bare_command)
+        menues["Geometric operations"].add_command(label='Overlay', command=self.geometric_operatioins_overlay_menu_bare_command)
 
-        menues["Photometric operation"].add_command(label='Gray scale', command=None)
+        menues["Photometric operation"].add_command(label='Gray scale', command=self.photometric_operation_gray_scale_menu_bare_command)
         menues["Photometric operation"].add_command(label='Resolution under-scaling', command=None)
 
         menues["Filters"].add_command(label='Mean', command=None)
@@ -325,8 +325,157 @@ class Application(Window):
         
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.rescale,(x,y),'o'))
         self.redraw_operation_stack_tree_view()
+    
+    def geometric_operatioins_cut_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
 
+        x = simpledialog.askinteger("X POSITION","ENTER THE X POSITION FOR THE UPPER LEFT CORNER OF THE IMAGE")
+        if x is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if not 0<=x<input_imgs.width:
+            messagebox.showerror("ERROR","X IS OUT OF BOUND")
+            return
+        
+        y = simpledialog.askinteger("Y POSITION","ENTER THE Y POSITION FOR THE UPPER LEFT CORNER OF THE IMAGE")
+        if y is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if not 0<=y<input_imgs.height:
+            messagebox.showerror("ERROR","Y IS OUT OF BOUND")
+            return
+        
+        w = simpledialog.askinteger("WIDTH","ENTER THE WIDTH OF THE SUB-IMAGE")
+        if w is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if w <= 0:
+            messagebox.showerror("ERROR","THE WIDTH MUST BE A POSTIVE INTEGER")
+            return
+        h = simpledialog.askinteger("HEIGHT","ENTER THE HEIGHT OF THE SUB-IMAGE")
+        if h is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if h <= 0:
+            messagebox.showerror("ERROR","THE HEIGHT MUST BE A POSTIVE INTEGER")
+            return
 
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.cut,(x,y,w,h),'o'))
+        self.redraw_operation_stack_tree_view()
+
+    def geometric_operatioins_past_on_canvas_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+    
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        # W
+        w = simpledialog.askinteger("WIDTH","ENTER THE WIDTH OF THE CANVAS")
+        if w is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if w <= 0:
+            messagebox.showerror("ERROR","THE WIDTH MUST BE A POSTIVE INTEGER")
+            return
+        if w < input_imgs.width:
+            messagebox.showerror('ERROR',"THE WIDTH OF THE CANVAS MUST BE LARGER THAN THE IMAGE")
+            return
+        # H
+        h = simpledialog.askinteger("HEIGHT","ENTER THE HEIGHT OF THE SUB-IMAGE")
+        if h is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if h <= 0:
+            messagebox.showerror("ERROR","THE HEIGHT MUST BE A POSTIVE INTEGER")
+            return
+        if h < input_imgs.height:
+            messagebox.showerror('ERROR',"THE HEIGHT OF THE CANVAS MUST BE LARGER THAT THE IMAGE")
+            return
+
+        x = simpledialog.askinteger("X POSITION","ENTER THE X POSITION FOR THE UPPER LEFT CORNER WHERE TO PASTE THE IMAGE")
+        if x is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if not 0<=x<w:
+            messagebox.showerror("ERROR","X IS OUT OF THE BOUNDS OF THE CANVAS")
+            return
+        
+        y = simpledialog.askinteger("Y POSITION","ENTER THE Y POSITION FOR THE UPPER LEFT CORNER WHERE TO PASTE THE IMAGE")
+        if y is None:
+            messagebox.showerror("ERROR","OPERATION WAS CANCELED")
+            return
+        if not 0<=y<h:
+            messagebox.showerror("ERROR","Y IS OUT OF THE BOUNDS OF THE CANVAS")
+            return
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.paste,(x,y,w,h),'o'))
+        self.redraw_operation_stack_tree_view()
+    
+    def geometric_operatioins_overlay_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        images = self.get_selected_images()
+        if len(images) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
+            return
+        if len(images) == 1:
+            messagebox.showerror('ERROR',"CAN'T OVERLAY ONE IMAGE")
+            return
+        W = max([img.width for img in images])
+        H = max([img.height for img in images])
+
+        result = images[0]
+        for img in images[1:]:
+            if img.width != W or img.height != H:
+                self.operation_stack.append(StackFrame(img,ift.MyImage.rescale,(W/img.width,H/img.height),'o'))
+                self.operation_stack.append(StackFrame(result,ift.MyImage.lay,(self.operation_stack[-1].imgs_out[0],),'o')) 
+                result = self.operation_stack[-1].imgs_out[0]
+            else:
+                self.operation_stack.append(StackFrame(result,ift.MyImage.lay,(img,),'o')) 
+
+        self.redraw_operation_stack_tree_view()
+
+    # PHOTOMETRIC OPERATIOSN
+    def photometric_operation_gray_scale_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        input_imgs =  self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+        
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.gray_scale,(),'o'))
+        self.redraw_operation_stack_tree_view()
+        
 
     # VISUALISATION
     def visualization_show_menu_bare_command(self):
