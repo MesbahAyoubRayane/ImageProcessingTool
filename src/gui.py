@@ -18,7 +18,7 @@ class Application(Window):
 
     def __create_components__(self):
         self.__create__menu_bare__()
-
+        self.__create_operations_stack__()
     def __create_layout__(self):
         ...
 
@@ -28,6 +28,7 @@ class Application(Window):
         self.configure(menu=menu)
         categories = ["Files", "Geometric operations", "Photometric operation", "Filters", "Histogram based operations",
                       "Segmentation", "Statistical constants", "Visualization"]
+        
         for m in categories:
             sub_menu = tk.Menu(menu, tearoff=False)
             menu.add_cascade(label=m, menu=sub_menu)
@@ -45,7 +46,7 @@ class Application(Window):
         menues["Geometric operations"].add_command(label='Re-scale', command=None)
         menues["Geometric operations"].add_command(label='Cut', command=None)
         menues["Geometric operations"].add_command(label='Past on canvas', command=None)
-        menues["Geometric operations"].add_command(label='Overlaye', command=None)
+        menues["Geometric operations"].add_command(label='Overlay', command=None)
 
         menues["Photometric operation"].add_command(label='Gray scale', command=None)
         menues["Photometric operation"].add_command(label='Resolution under-scaling', command=None)
@@ -78,6 +79,17 @@ class Application(Window):
         menues["Visualization"].add_command(label='Show Cumulative Histogram', command=None)
         menues["Visualization"].add_command(label='Show Cumulative Normalized Histogram', command=None)
 
+    def __create_operations_stack__(self):
+        columns =  ('FN','AGRS')
+        self.operation_stack_tree_view = ttk.Treeview(self)
+        self.operation_stack_tree_view['columns'] = columns
+
+        self.operation_stack_tree_view.heading("#0",text="N°")
+        for x in columns: self.operation_stack_tree_view.heading(x,text=x)
+
+        self.operation_stack_tree_view.insert("","end",text="blacla",values=columns)
+
+        self.operation_stack_tree_view.pack(expand=True,fill=tk.BOTH)
     def run(self):
         self.mainloop()
 
