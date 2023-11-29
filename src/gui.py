@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from ttkbootstrap.window import Window
+#from ttkbootstrap.window import Window
+from ttkthemes import ThemedTk
 import images_function_tools as ift
 from tkinter import filedialog,messagebox,simpledialog
 import os
@@ -39,15 +40,14 @@ class StackFrame:
         self.imgs_out:list[ift.MyImage] = r
 
 
-class Application(Window):
+class Application(ThemedTk):
     """
     The application will be initialized by the init , inside the innit several calls for deferent init function will occure , to create the components the layout and other stuff
     At the end a binding function will be called to define behaviours
     """
 
     def __init__(self):
-        super().__init__()
-        self.theme = "superhero"
+        super().__init__(theme='breeze') 
         self.title("Image processing software")
         self.geometry("1100x700")
         self.__create_components__()
@@ -122,8 +122,8 @@ class Application(Window):
         self.operation_stack_tree_view.pack(expand=True, fill=tk.BOTH)
     
     def __create_buttons__(self):
-        self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command,bootstyle="danger")
-        self.cpy_btn = ttk.Button(self,text="Copy to top",command=self.btn_cpy_command,bootstyle="success")
+        self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command)
+        self.cpy_btn = ttk.Button(self,text="Copy to top",command=self.btn_cpy_command)
         self.cpy_btn.pack(fill=tk.BOTH,padx=5,pady=3) 
         self.dlt_btn.pack(fill=tk.BOTH,padx=5,pady=3)
 
