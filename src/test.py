@@ -77,13 +77,13 @@ def test_binary_taging(img:MyImage):
 
 
 if __name__ == "__main__":
-    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).median_filter(11)
+    img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
     """s0 = img.cut(0,0,img.width//2,img.height//2)
     s1 = img.cut(0,img.height//2,img.width//2,img.height//2)
     s2 = img.cut(img.width//2,0,img.width//2,img.height//2)
     s3 = img.cut(img.width//2,img.height//2,img.width//2,img.height//2)
     MyImage.show_images([img,s0,s1,s2,s3])"""
-    img.laplacian_sharpning_filter("manhatten",3).show_image()
+    #img.laplacian_sharpning_filter("manhatten",3).show_image()
     #img0,img1,img2 = img.kmean(3)
     #img0.binary_tagging().lay(img1.binary_tagging()).lay(img2.binary_tagging()).show_image()
     #img.resolution_underscaling(32).show_image()

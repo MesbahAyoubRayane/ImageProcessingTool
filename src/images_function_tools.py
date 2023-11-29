@@ -117,20 +117,22 @@ class MyImage:
                 cpy[x_,y_] = v
         return cpy
     
-    def paste(self,x:int,y:int,new_width:int,new_height:int):
+    def paste(self,x:int,y:int,w:int,h:int):
         """
         This function allow you to paste another image on the new image, the new image must be of a larger size
-        for it to contain the old image 
+        for it to contain the old image
         """
-        if self.width > new_width or self.height > new_height:
-            raise ValueError('The image is bigger than the canvas')
-        img = MyImage.new(new_width,new_height,self.mode)
-        X,Y = x,y
-        for x,y,*v in self.pixels():
-            if x+X < img.width and y +Y < img.height:
-                img[x+X,y+Y] = v
-            
-        return img  
+        if self.width > w or self.height > h: raise ValueError('The image is bigger than the canvas')
+        img = MyImage.new(w,h,self.mode)
+
+        if x < w and y < h:
+            yf = min(h - y,self.height)
+            xf = min(w - x,self.width)
+            img.r[y:y+yf,x:x+xf] = self.r.copy()[:yf,:xf]
+            img.g[y:y+yf,x:x+xf] = self.g.copy()[:yf,:xf]
+            img.b[y:y+yf,x:x+xf] = self.b.copy()[:yf,:xf]
+        
+        return img
     
     def lay(self,img):
         """
@@ -1111,8 +1113,7 @@ class MyImage:
         create a new image having width w and hight h , and initilise the rgb matrices to zero 
         """
         mode = mode.upper()
-        if mode not in MyImage.MODES:
-            raise ValueError(f'the selected mode <{mode}> is not provided')   
+        if mode not in MyImage.MODES: raise ValueError(f'the selected mode <{mode}> is not provided')   
         v = np.full((h,w),0,dtype=np.uint8)
         return MyImage(v,v,v,mode)
     @staticmethod
