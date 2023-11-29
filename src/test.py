@@ -78,7 +78,6 @@ def test_binary_taging(img:MyImage):
 
 if __name__ == "__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename()).median_filter(11)
-    imgs = img.kmean(3)
-    for x in imgs:
-        MyImage.show_images([x,x.binary_tagging()])
+    img0,img1,img2 = img.kmean(3)
+    img0.binary_tagging().lay(img1.binary_tagging()).lay(img2.binary_tagging()).show_image()
     #img.resolution_underscaling(32).show_image()

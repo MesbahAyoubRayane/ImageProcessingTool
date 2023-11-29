@@ -133,6 +133,24 @@ class MyImage:
             
         return img  
     
+    def lay(self,img):
+        """
+        take an image as an argument and lay the first image on the second resulting a new image containing both
+        Note:
+        In the implementation i'm doing a sum of each chanel , so the overlapping pixels will have a value of 255
+        """
+        img:MyImage = img
+        if self.mode != img.mode: raise Exception("the images must be of the same mode")
+        if img.dimensions != self.dimensions: raise Exception(f"You can't lay an image of size {img.dimensions} on an image of size {self.dimensions} , the size must be the same")
+        cpy_img = MyImage.new(self.width,self.height,self.mode)
+
+        cpy_img.r = (self.r.flatten().astype(np.uint32) + img.r.flatten().astype(np.uint32)).clip(0,255).astype(np.uint8).reshape(self.r.shape)
+        cpy_img.g = (self.g.flatten().astype(np.uint32) + img.g.flatten().astype(np.uint32)).clip(0,255).astype(np.uint8).reshape(self.g.shape)
+        cpy_img.b = (self.b.flatten().astype(np.uint32) + img.b.flatten().astype(np.uint32)).clip(0,255).astype(np.uint8).reshape(self.b.shape)
+
+        return cpy_img
+
+
     def reflecte(self,axe:str):
         """
         mirrore the image on the horizantal or vertical axe
@@ -881,7 +899,7 @@ class MyImage:
         if self.mode == "RGB":
             for k,v in clusters.items():
                 img = MyImage.new(self.width,self.height,self.mode)
-                if k == (0,0,0):
+                while k == (0,0,0):
                     k = np.random.randint(0,256),np.random.randint(0,256),np.random.randint(0,256)
                 
                 for p in v:
@@ -892,7 +910,7 @@ class MyImage:
         elif self.mode =='L':
             for k,v in clusters.items():
                 img = MyImage.new(self.width,self.height,self.mode)
-                if k == 0:
+                while k == 0:
                     k = np.random.randint(0,256)
                 for p in v:
                     img[p] = k
