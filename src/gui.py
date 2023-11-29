@@ -36,7 +36,7 @@ class StackFrame:
             raise Exception("The only types accapted as output for the stack frame are list of MyImage or MyImage")
         
         if isinstance(r,ift.MyImage):r = [r]
-        self.imgs_out:list[ift.MyImage] = r 
+        self.imgs_out:list[ift.MyImage] = r
 
 
 class Application(Window):
@@ -65,7 +65,7 @@ class Application(Window):
         menues: dict[str:tk.Menu] = {}
         self.configure(menu=menu)
         categories = ["Files", "Geometric operations", "Photometric operation", "Filters", "Histogram based operations",
-                      "Segmentation", "Statistical constants", "Visualization"]
+                      "Segmentation", "Visualization"]
         
         for m in categories:
             sub_menu = tk.Menu(menu, tearoff=False)
@@ -99,24 +99,18 @@ class Application(Window):
         menues["Histogram based operations"].add_command(label='Inverse', command=self.histograme_based_operations_inverse_menu_bare_command) # 1 -> 1
         menues["Histogram based operations"].add_command(label='Dynamic expansion', command=self.histograme_based_operations_dynamic_expansion_menu_bare_command) # 1 -> 1
         menues["Histogram based operations"].add_command(label='Equalization', command=self.histogram_based_operations_equalization_menu_bare_command) # 1 -> 1
-        menues["Histogram based operations"].add_command(label='Histogram matching', command=self.histogram_based_operations_histogram_matching_menu_bare_command) # 2 -> 1 TODO
+        menues["Histogram based operations"].add_command(label='Histogram matching', command=self.histogram_based_operations_histogram_matching_menu_bare_command) # 2 -> 1 
 
         menues["Segmentation"].add_command(label='Object detection', command=None) # 1 -> n 
         menues["Segmentation"].add_command(label='Edge detection', command=None) # 1 -> 1
-
-        menues["Statistical constants"].add_command(label='Mean', command=None) # 1 -> 0
-        menues["Statistical constants"].add_command(label='Std', command=None) # 1 -> 0
-        menues["Statistical constants"].add_command(label='Variance', command=None) # 1 -> 0
-        menues["Statistical constants"].add_command(label='Median', command=None) # 1 -> 0
-        menues["Statistical constants"].add_command(label='Outliers', command=None) # 1 -> 0
-
 
         menues["Visualization"].add_command(label='Show Image', command=self.visualization_show_menu_bare_command) # 1 -> 0
         menues["Visualization"].add_command(label='Show Histogram', command=None) # 1 -> 0
         menues["Visualization"].add_command(label='Show Normalized Histogram', command=None) # 1 -> 0
         menues["Visualization"].add_command(label='Show Cumulative Histogram', command=None) # 1 -> 0
         menues["Visualization"].add_command(label='Show Cumulative Normalized Histogram', command=None) # 1 -> 0
-        menues["Visualization"].add_command(label='Show Dimensions', command=None) # 1 -> 0
+        menues["Visualization"].add_command(label='Show Metadata', command=None) # 1 -> 0
+        """ MEAN , STANDAR DEVIATION , VARIANCE,MEDIAN , Outliers, DIMENSIONS , IMAGE MODE RGB,L"""
 
     def __create_operations_stack__(self):
         self.operation_stack_tree_view = ttk.Treeview(master=self, columns=('N°', 'Operation', 'Args'), show='headings')
@@ -129,8 +123,10 @@ class Application(Window):
     
     def __create_buttons__(self):
         self.undo_btn = ttk.Button(self,text="Undo",command=None)
+        self.dlt_btn = ttk.Button(self,text="Discard",command=None,bootstyle="danger") 
 
-        self.undo_btn.pack(fill=tk.BOTH)
+        self.dlt_btn.pack(fill=tk.BOTH,padx=5,pady=3)
+        self.undo_btn.pack(fill=tk.BOTH,padx=5,pady=3)
 
     def run(self):
         self.mainloop()
