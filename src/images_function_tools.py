@@ -114,7 +114,7 @@ class MyImage:
             x_ = x + vec[0]
             y_ =y + vec[1]
             if 0<=x_<self.width and 0<= y_ < self.height:
-                cpy[x_,y_] = v if self.mode == "RGB" else v[0]
+                cpy[x_,y_] = v
         return cpy
     
     def paste(self,new_width:int,new_height:int,upper_left_point:tuple[int,int]):
@@ -1163,7 +1163,7 @@ class MyImage:
             for x in range(self.width):
                 for y in range(self.height):
                     img_to_save.putpixel((x,y),self[x,y])
-
+        else: raise Exception(f"{self.mode} is not supported")
         
         img_to_save.save(path)
     
