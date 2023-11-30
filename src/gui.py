@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import ttkbootstrap
 from ttkbootstrap.window import Window
 import images_function_tools as ift
 from tkinter import filedialog,messagebox,simpledialog
@@ -91,9 +92,10 @@ class Application(Window):
     MAX_PAST_WIDTH = 5000
     MAX_PAST_HEIGHT = 5000
     def __init__(self):
-        super().__init__() 
+        super().__init__(themename="superhero") 
         self.title("Image processing software")
-        self.geometry("1100x700")
+        self.geometry("900x500")
+        self.minsize("900",'500')
         self.__create_components__()
 
         # gloabl variables
@@ -165,9 +167,9 @@ class Application(Window):
         self.operation_stack_tree_view.pack(expand=True, fill=tk.BOTH)
     
     def __create_buttons__(self):
-        self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command)
-        self.cpy_btn = ttk.Button(self,text="Copy to top",command=self.btn_cpy_command)
-        self.clr_btn = ttk.Button(self,text="Clear",command=self.btn_clr_command)
+        self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command,bootstyle=ttkbootstrap.DANGER)   
+        self.cpy_btn = ttk.Button(self,text="Copy to top",command=self.btn_cpy_command,bootstyle=ttkbootstrap.PRIMARY)
+        self.clr_btn = ttk.Button(self,text="Clear",command=self.btn_clr_command,bootstyle=ttkbootstrap.SUCCESS)
 
         self.clr_btn.pack(fill=tk.BOTH,padx=5,pady=3)
         self.cpy_btn.pack(fill=tk.BOTH,padx=5,pady=3) 
