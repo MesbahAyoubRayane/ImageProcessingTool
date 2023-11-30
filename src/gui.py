@@ -967,7 +967,3 @@ class Application(Window):
         for i in selected_stack_frames:
             imges.append(int(self.operation_stack_tree_view.item(i)["values"][0]))
         return imges
-
-
-if __name__ == "__main__":
-    Application().run()
