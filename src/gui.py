@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-#from ttkbootstrap.window import Window
-from ttkthemes import ThemedTk
+from ttkbootstrap.window import Window
 import images_function_tools as ift
 from tkinter import filedialog,messagebox,simpledialog
 import os
@@ -83,15 +82,15 @@ class MetaDataFrame(tk.Toplevel):
     def run(self):
         self.mainloop()
 
-class Application(ThemedTk):
-
+class Application(Window):
     """
     The application will be initialized by the init , inside the innit several calls for deferent init function will occure , to create the components the layout and other stuff
     At the end a binding function will be called to define behaviours
     """
+    MAX_CLUSTERS_SIZE = 50
 
     def __init__(self):
-        super().__init__(theme='breeze') 
+        super().__init__() 
         self.title("Image processing software")
         self.geometry("1100x700")
         self.__create_components__()
@@ -154,7 +153,6 @@ class Application(ThemedTk):
         menues["Visualization"].add_command(label='Show Image', command=self.visualization_show_menu_bare_command) # 1 -> 0
         menues["Visualization"].add_command(label='Show Histogram', command=self.visualization_show_show_histograms) # 1 -> 0
         menues["Visualization"].add_command(label='Show Metadata', command=self.visualization_show_meta_data_menu_bare_command) # 1 -> 0
-        """ MEAN , STANDAR DEVIATION ,MEDIAN , Outliers, DIMENSIONS , IMAGE MODE RGB,L"""
 
     def __create_operations_stack__(self):
         self.operation_stack_tree_view = ttk.Treeview(master=self, columns=('N°', 'Operation', 'Args'), show='headings',selectmode="extended")
@@ -251,27 +249,18 @@ class Application(ThemedTk):
     
     # GEOMETRIC OPERATION
     def geometric_operations_translation_menu_bare_command(self):
-        """
-        - test if the stack frame is not empty
-        - ask for how many pixels to translate for the x axes and the y axes
-        - perfomre the operation
-        - push into the stack the result as a StackFrame
-        """
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
-            return
+        input_imgs =  self.get_selected_images()
         
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
-        x = simpledialog.askinteger("TRANSLATION","ENTER NUMBER OF PXLS FOR TRANSLATION OF THE X AXES")
+        x = simpledialog.askinteger("TRANSLATION","ENTER NUMBER OF PIXELS FOR TRANSLATION OF THE X AXES")
         if x == None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
             return
@@ -285,27 +274,18 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def geometric_operations_rotation_menu_bare_command(self):
-        """
-        - test if the stack frame is not empty
-        - ask how many degrees to rotate
-        - performe operation
-        - push into the stack the result as a StackFrame
-        """
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
-            return
+        input_imgs =  self.get_selected_images()
         
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
         
-        theta = simpledialog.askinteger("TRANSLATION","ENTER ANGLE IN DEGREES")
+        theta = simpledialog.askinteger("ROTATION","ENTER THE ANGLE IN DEGREES")
         if theta is None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
             return
@@ -314,18 +294,16 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def geometric_operations_reflection_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
+
         input_imgs = input_imgs[0]
         direction  = simpledialog.askstring("REFLECTION",'H FOR HORIZANTALL AND V FOR VERTICAL')
         if direction is None:
@@ -340,17 +318,14 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
 
     def geometric_operations_rescale_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
-            return
         
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -371,20 +346,16 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def geometric_operatioins_cut_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
-        if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
-            return
-        input_imgs = input_imgs[0]
 
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
+            return
+        
+        input_imgs = input_imgs[0]
         x = simpledialog.askinteger("X POSITION","ENTER THE X POSITION FOR THE UPPER LEFT CORNER OF THE IMAGE")
         if x is None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
@@ -420,17 +391,13 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
 
     def geometric_operatioins_past_on_canvas_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-    
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -477,9 +444,6 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def geometric_operatioins_overlay_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
-            return
         images = self.get_selected_images()
         if len(images) == 0:
             messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
@@ -487,33 +451,34 @@ class Application(ThemedTk):
         if len(images) == 1:
             messagebox.showerror('ERROR',"CAN'T OVERLAY ONE IMAGE")
             return
+        if len(set([img.mode for img in images])) != 1:
+            messagebox.showerror('ERROR',"CAN'T OVERLAY IMAGES OF DIFFERENT TYPES")
+            return
         W = max([img.width for img in images])
         H = max([img.height for img in images])
 
         result = images[0]
-        for img in images[1:]:
+        for img in images[1:-1]:
             if img.width != W or img.height != H:
-                self.operation_stack.append(StackFrame(img,ift.MyImage.rescale,(W/img.width,H/img.height),'o'))
-                self.operation_stack.append(StackFrame(result,ift.MyImage.lay,(self.operation_stack[-1].imgs_out[0],),'o')) 
-                result = self.operation_stack[-1].imgs_out[0]
-            else:
-                self.operation_stack.append(StackFrame(result,ift.MyImage.lay,(img,),'o')) 
+                img = img.rescale(W/img.width,H/img.height)
+            result = result.lay(img)
 
+        if images[-1].dimensions != result.dimensions:
+            W,H = result.dimensions
+            result.rescale(images[-1].width/W,images[-1].height/H)
+
+        self.operation_stack.append(StackFrame(images[-1],ift.MyImage.lay,(result,),'o'))
         self.redraw_operation_stack_tree_view()
 
     # PHOTOMETRIC OPERATIOSN
     def photometric_operation_gray_scale_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -521,19 +486,18 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def photometric_operation_resolution_under_scaling(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
-        factor = simpledialog.askinteger("FACTOR","ENTER THE FACTOR BETWEEN 2<= factor <256,NOTE : FACTOR MUST divide 256")
+        factor = simpledialog.askinteger("FACTOR","ENTER THE FACTOR BETWEEN 1 < factor < 256\nNOTE: FACTOR MUST divide 256")
         if factor is None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
             return
@@ -548,17 +512,13 @@ class Application(ThemedTk):
 
     # Histogram based operations
     def histogram_based_operations_translation_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -571,17 +531,14 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
 
     def histograme_based_operations_inverse_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
-            return
         
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
         
@@ -589,17 +546,13 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def histograme_based_operations_dynamic_expansion_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -607,17 +560,13 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def histogram_based_operations_equalization_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -625,17 +574,13 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
 
     def histogram_based_operations_histogram_matching_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -650,26 +595,26 @@ class Application(ThemedTk):
             x = ['.jpeg',".png",".jpg"]
             messagebox.showerror("ERROR",f"CHOOSE AN IMAGE OF TYPE {x}")
             return
-        mdl = ift.MyImage.open_image_as_rgb_matrices(path)
-        if input_imgs.mode == "L":
-            mdl = mdl.gray_scale()
+        try:
+            mdl = ift.MyImage.open_image_as_rgb_matrices(path)
+        except Exception as e:
+            print(e)
+            messagebox.showerror('ERROR',"CAN'T OPEN THE SELECTED IMAGE")
+            return
+        if input_imgs.mode == "L": mdl = mdl.gray_scale()
         
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.histo_matching,(mdl,),'o'))
         self.redraw_operation_stack_tree_view()
 
     # Filter
     def filters_mean_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -692,17 +637,13 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
 
     def filters_gaussian_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
-            return
-        
         input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -729,22 +670,17 @@ class Application(ThemedTk):
             messagebox.showerror("ERROR","STANDAR DEVIATION MUST BE POSITIVE")
             return
         
-
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.gaussian_filter,(size,std),'o'))
         self.redraw_operation_stack_tree_view()
 
     def filters_median_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -767,17 +703,13 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
 
     def filters_lablacian_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -808,17 +740,13 @@ class Application(ThemedTk):
         self.redraw_operation_stack_tree_view()
     
     def filters_bilateral_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+        input_imgs =  self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
-        
-        input_imgs =  self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR","ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
-            return
-        
+
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR","THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -843,7 +771,7 @@ class Application(ThemedTk):
             messagebox.showerror("ERROR","STANDAR DEVIATION MUST BE POSITIVE")
             return
         
-        std_b = simpledialog.askfloat("STANDARE DEVIATION","ENTER THE VALUE OF THE STANDAR DEVIATIONS FRO THE BRIGHTNESS GAUSSIAN")
+        std_b = simpledialog.askfloat("STANDARE DEVIATION","ENTER THE VALUE OF THE STANDAR DEVIATIONS FOR THE BRIGHTNESS GAUSSIAN")
         if std_b is None:
             messagebox.showerror('ERROR',"OPERATION WAS CANCELLED")
             return
@@ -856,18 +784,13 @@ class Application(ThemedTk):
     
     # Segmentation
     def segmentation_edge_detection_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR", "NO IMAGE WAS PROVIDED")
-            return
-
-        input_imgs = self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR", "ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+        input_imgs = self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
 
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR",
-                                "THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -884,43 +807,37 @@ class Application(ThemedTk):
             return
 
         operation = simpledialog.askinteger("OPERATOR TYPE",
-                                            "CHOOSE THE OPERATOR FOR THE EDGE DETECTION\n1 FOR ROBERT\n2 FOR SOBEL\n3 FOR PREWITT")
+                                            "CHOOSE THE OPERATOR FOR THE EDGE DETECTION\n1-ROBERT\n2-SOBEL\n3-PREWITT")
         if operation is None:
             messagebox.showerror("ERROR", "THE OPERATION WAS CANCELLED")
             return
+        
         if operation not in (1, 2, 3):
             messagebox.showerror("ERROR", "UNSOPPRTED OPTION")
             return
         
         if operation == 1:
-            self.operation_stack.append(
-                StackFrame(input_imgs, ift.MyImage.edge_detection_robert, (threshold,), 'o'))
+            stckfrm = StackFrame(input_imgs, ift.MyImage.edge_detection_robert, (threshold,), 'o')
             
         elif operation == 2:
-            self.operation_stack.append(
-                StackFrame(input_imgs, ift.MyImage.edge_detection_sobel, (threshold,), 'o'))
+            stckfrm = StackFrame(input_imgs, ift.MyImage.edge_detection_sobel, (threshold,), 'o')
         elif operation == 3:
-            self.operation_stack.append(
-                StackFrame(input_imgs, ift.MyImage.edges_detection_prewitt, (threshold,), 'o'))
+            stckfrm = StackFrame(input_imgs, ift.MyImage.edges_detection_prewitt, (threshold,), 'o')
         else:
             messagebox.showerror("ERROR",f"THERE IS NO OPERATOR FOR THE SELECTED OPTION {operation}")
             return
 
+        self.operation_stack.append(stckfrm)
         self.redraw_operation_stack_tree_view()
 
     def segmentation_object_detection_menu_bare_command(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR", "NO IMAGE WAS PROVIDED")
-            return
-
-        input_imgs = self.operation_stack[-1].imgs_out
-        if len(input_imgs) <= 0:
-            messagebox.showerror("ERROR", "ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+        input_imgs = self.get_selected_images()
+        if len(input_imgs) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
             return
 
         if len(input_imgs) > 1:
-            messagebox.showerror("ERROR",
-                                "THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            messagebox.showerror("ERROR","THIS OPERATION TAKE ONLY ONE IMAGE AS INPUT")
             return
         input_imgs = input_imgs[0]
 
@@ -930,10 +847,10 @@ class Application(ThemedTk):
         if k<=0:
             messagebox.showerror('ERROR',"THE NUMBER OF CLUSTERS MUST BE POSITIVE")
             return
-        if k > 20:
-            messagebox.showerror('ERROR',"THE MAXIMUM SUPPORTED FOR K IS 20")
+        if k > Application.MAX_CLUSTERS_SIZE:
+            messagebox.showerror('ERROR',f"THE MAXIMUM SUPPORTED FOR K IS {Application.MAX_CLUSTERS_SIZE}")
             return
-        use_tagging = messagebox.askyesno("TAGGING","WHOULD YOU LIKE TO USE THE BINARY TAGGING ON EACH CLUSTER ?")
+        use_tagging = messagebox.askyesno("TAGGING","WOULD YOU LIKE TO USE THE BINARY TAGGING ON EACH CLUSTER ?")
         
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.kmean,(k,),'o'))
         if use_tagging:
