@@ -905,6 +905,7 @@ class MyImage:
                 correspondance = {i:k for i,k in enumerate(clusters.keys())}
                 new_clusters = {k:[] for k in clusters.keys()}
                 for i in range(self.width*self.height):
+                    if int(new_position[i]) not in correspondance:continue
                     c = correspondance[int(new_position[i])]
                     x,y = int(i%self.width),i//self.width
                     new_clusters[c].append((x,y))
@@ -915,6 +916,7 @@ class MyImage:
                         break
                 clusters = {}
                 for k,v in new_clusters.items():
+                    if len(v)==0:continue
                     clusters[mean_rgb(v)] = v
 
         elif self.mode == 'L':
