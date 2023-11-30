@@ -78,7 +78,11 @@ def test_binary_taging(img:MyImage):
 
 if __name__ == "__main__":
     img = MyImage.open_image_as_rgb_matrices(filedialog.askopenfilename())
-    img.translation_imp(-10,10).show_image()
+    img.show_histogram()
+    img.show_normalized_histogram()
+    exit()
+    kmean = img.kmean(3)
+    MyImage.show_images([img,kmean[0].binary_tagging(),kmean[1].binary_tagging(),kmean[2].binary_tagging()])
     #img.laplacian_sharpning_filter("manhatten",3).show_image()
     #img0,img1,img2 = img.kmean(3)
     #img0.binary_tagging().lay(img1.binary_tagging()).lay(img2.binary_tagging()).show_image()

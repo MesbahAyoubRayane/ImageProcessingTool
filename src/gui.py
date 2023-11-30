@@ -39,8 +39,52 @@ class StackFrame:
         if isinstance(r,ift.MyImage):r = [r]
         self.imgs_out:list[ift.MyImage] = r
 
+class MetaDataFrame(tk.Toplevel):
+    def __init__(self,master:tk.Frame|tk.Tk,imgs:list[ift.MyImage]):
+        super().__init__(master=master)
+        for i,img in enumerate(imgs):
+            frm = ttk.Frame(self)
+            
+            ttk.Label(frm,text="IMAGE N°: "      + str(i)).pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+            ttk.Label(frm,text="DIMENSIONS : "   + str(img.dimensions)).pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+            ttk.Label(frm,text="IMAGE MODE : "   + str(img.mode)).pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+            mean = img.mean()
+            if isinstance(mean,tuple):
+                mean = round(mean[0],2),round(mean[1],2),round(mean[2],2)
+            else:
+                mean = round(mean,2)
+            ttk.Label(frm,text="IMAGE MEAN : "   + str(mean)).pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+            median = img.median()
+            if isinstance(median,tuple):
+                median = round(median[0],2),round(median[1],2),round(median[2],2)
+            else:
+                median = round(median,2)
+            ttk.Label(frm,text="IMAGE MEDIAN : " + str(median)).pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+
+            std = img.std()
+            if isinstance(std,tuple):
+                std = round(std[0],2),round(std[1],2),round(std[2],2)
+            else:
+                std = round(std,2)
+            ttk.Label(frm,text="IMAGE STANDARE DEVIATION : " + str(std)).pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+            
+            out = img.outliers()
+            if isinstance(out,tuple):
+                out = sum(out) / (img.width * img.height * 3)
+            elif isinstance(out,int):
+                out = out / (img.width * img.height)
+            out = round(out * 100,2)
+            ttk.Label(frm,text="IMAGE OUTLIERS : "+ str(out)+"%").pack(side=tk.TOP,fill=tk.BOTH,expand=True)
+
+            frm.pack(side=tk.LEFT,fill=tk.BOTH,expand=True,padx=10,pady=10)
+        
+        self.resizable(False,False)
+    
+    def run(self):
+        self.mainloop()
 
 class Application(ThemedTk):
+
     """
     The application will be initialized by the init , inside the innit several calls for deferent init function will occure , to create the components the layout and other stuff
     At the end a binding function will be called to define behaviours
@@ -51,6 +95,9 @@ class Application(ThemedTk):
         self.title("Image processing software")
         self.geometry("1100x700")
         self.__create_components__()
+
+        # gloabl variables
+        self.meta_data_frame:MetaDataFrame = None
 
         self.operation_stack:list[StackFrame] = []
 
@@ -101,16 +148,13 @@ class Application(ThemedTk):
         menues["Histogram based operations"].add_command(label='Equalization', command=self.histogram_based_operations_equalization_menu_bare_command) # 1 -> 1
         menues["Histogram based operations"].add_command(label='Histogram matching', command=self.histogram_based_operations_histogram_matching_menu_bare_command) # 2 -> 1 
 
-        menues["Segmentation"].add_command(label='Object detection', command=None) # 1 -> n 
+        menues["Segmentation"].add_command(label='Object detection', command=self.segmentation_object_detection_menu_bare_command) # 1 -> n 
         menues["Segmentation"].add_command(label='Edge detection', command=self.segmentation_edge_detection_menu_bare_command) # 1 -> 1
 
         menues["Visualization"].add_command(label='Show Image', command=self.visualization_show_menu_bare_command) # 1 -> 0
-        menues["Visualization"].add_command(label='Show Histogram', command=None) # 1 -> 0
-        menues["Visualization"].add_command(label='Show Normalized Histogram', command=None) # 1 -> 0
-        menues["Visualization"].add_command(label='Show Cumulative Histogram', command=None) # 1 -> 0
-        menues["Visualization"].add_command(label='Show Cumulative Normalized Histogram', command=None) # 1 -> 0
-        menues["Visualization"].add_command(label='Show Metadata', command=None) # 1 -> 0
-        """ MEAN , STANDAR DEVIATION , VARIANCE,MEDIAN , Outliers, DIMENSIONS , IMAGE MODE RGB,L"""
+        menues["Visualization"].add_command(label='Show Histogram', command=self.visualization_show_show_histograms) # 1 -> 0
+        menues["Visualization"].add_command(label='Show Metadata', command=self.visualization_show_meta_data_menu_bare_command) # 1 -> 0
+        """ MEAN , STANDAR DEVIATION ,MEDIAN , Outliers, DIMENSIONS , IMAGE MODE RGB,L"""
 
     def __create_operations_stack__(self):
         self.operation_stack_tree_view = ttk.Treeview(master=self, columns=('N°', 'Operation', 'Args'), show='headings',selectmode="extended")
@@ -864,6 +908,41 @@ class Application(ThemedTk):
 
         self.redraw_operation_stack_tree_view()
 
+    def segmentation_object_detection_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR", "NO IMAGE WAS PROVIDED")
+            return
+
+        input_imgs = self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR", "ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR",
+                                "THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        k = simpledialog.askinteger("K VALUE","ENTER THE NUMBER OF CLUSTERS")
+        if k is None:
+            return
+        if k<=0:
+            messagebox.showerror('ERROR',"THE NUMBER OF CLUSTERS MUST BE POSITIVE")
+            return
+        if k > 20:
+            messagebox.showerror('ERROR',"THE MAXIMUM SUPPORTED FOR K IS 20")
+            return
+        use_tagging = messagebox.askyesno("TAGGING","WHOULD YOU LIKE TO USE THE BINARY TAGGING ON EACH CLUSTER ?")
+        
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.kmean,(k,),'o'))
+        if use_tagging:
+            kmean_clusters = self.operation_stack[-1].imgs_out 
+            for img in kmean_clusters:
+                self.operation_stack.append(StackFrame(img,ift.MyImage.binary_tagging,(),'o'))
+        
+        self.redraw_operation_stack_tree_view()
+
     # VISUALISATION
     def visualization_show_menu_bare_command(self):
         """
@@ -878,7 +957,48 @@ class Application(ThemedTk):
             return
         ift.plt.clf()
         ift.MyImage.show_images(imges)
-    
+
+    def visualization_show_meta_data_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        imgs =  self.get_selected_images()
+        if len(imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS SELCTED")
+            return
+        
+        if self.meta_data_frame is not None:
+            self.meta_data_frame.destroy()
+        
+        self.meta_data_frame = MetaDataFrame(self,imgs)
+        self.meta_data_frame.run()
+
+    def visualization_show_show_histograms(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
+            return
+        
+        imgs =  self.get_selected_images()
+        if len(imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS SELCTED")
+            return
+        
+        h = simpledialog.askinteger('HISTOGRAM TYPE',"CHOOSE THE TYPE OF THE HISTOGRAM\n1- FREQUENCY HISTOGRAM\n2-NORMILIZED HISTOGRAM\n3-CUMULATED HISTOGRAM\n4-CUMULATED NORMALIZED HISTOGRAM")
+        if h is None:
+            messagebox.showerror('ERROR',"OPERATION WAS CANCALLED")
+            return
+        if h not in (1,2,3,4):
+            messagebox.showerror('ERROR',"UNCORRECT OPTION")
+            return
+        TYPE = {
+            1:'h',
+            2:'nh',
+            3:'ch',
+            4:"cnh",
+        }
+        ift.MyImage.show_histograms(imgs,TYPE[h])
+
     # Button
     def btn_dlt_command(self):
         selected_images  = self.get_selected_images_by_index()
@@ -903,7 +1023,7 @@ class Application(ThemedTk):
         self.operation_stack.clear()
         self.redraw_operation_stack_tree_view()
 
-    # useful methods
+    # private methods
     def redraw_operation_stack_tree_view(self):
         self.operation_stack_tree_view.delete(*self.operation_stack_tree_view.get_children())
         for i,stck in enumerate(self.operation_stack):
@@ -924,6 +1044,7 @@ class Application(ThemedTk):
         for i in selected_stack_frames:
             imges.append(int(self.operation_stack_tree_view.item(i)["values"][0]))
         return imges
+
 
 if __name__ == "__main__":
     Application().run()

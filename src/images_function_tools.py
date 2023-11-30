@@ -1105,6 +1105,30 @@ class MyImage:
         elif self.mode == "L":
             return np.median(self.r.flatten())
     
+    def outliers(self) -> tuple[int,int,int]|int:
+        if self.mode == "RGB":
+            r_mean = self.r.flatten().mean()
+            r_std = self.r.std()
+            r_out = ((self.r.flatten() > r_mean + 1.5 * r_std) | (self.r.flatten() < r_mean - 1.5 * r_std)).sum() 
+
+            g_mean = self.g.flatten().mean()
+            g_std =  self.g.flatten().std()
+            g_out = ((self.g.flatten() > g_mean + 1.5 * g_std) | (self.g.flatten() < g_mean - 1.5 * g_std)).sum()
+
+            b_mean = self.b.flatten().mean()
+            b_std =  self.b.flatten().std()
+            b_out = ((self.b.flatten() > b_mean + 1.5 * b_std) | (self.b.flatten() < b_mean - 1.5 * b_std)).sum()
+
+            return int(r_out),int(g_out),int(b_out)
+            
+        elif self.mode == 'L':
+            gray_mean = self.r.flatten().mean()
+            gray_std = self.r.std()
+            gray_out = ((self.r.flatten() > gray_mean + 1.5 * gray_std) | (self.r.flatten() < gray_mean - 1.5 * gray_std)).sum()
+            return int(gray_out)
+        else:
+            raise Exception(f"{self.mode} is not supported")
+
     def index(self) -> np.ndarray:
         if self.mode == 'RGB':
             A,B,C = self.normilized_histograme()
@@ -1189,7 +1213,7 @@ class MyImage:
         plt.show()
 
     # TODO this function will be re-created cause it is not defined correctly
-    def show_histogram(self):
+    """def show_histogram(self):
         img = Image.new('RGB',(self.width,self.height))
         img.putdata(list(zip(self.r.flatten(),self.g.flatten(),self.b.flatten())))
         
@@ -1218,10 +1242,10 @@ class MyImage:
             axeg = plt.subplot2grid((2,1),(1,0),colspan=1)
             axeg.hist(np.concatenate([self.r.flatten(),self.b.flatten(),self.g.flatten()]),bins=256,color='gray')
         
-        plt.show()
+        plt.show()"""
     
     # TODO this function will be re-created cause it is not defined correctly
-    def show_normalized_histogram(self):
+    """def show_normalized_histogram(self):
         img = Image.new('RGB',(self.width,self.height))
         img.putdata(list(zip(self.r.flatten(),self.g.flatten(),self.b.flatten())))
 
@@ -1306,16 +1330,95 @@ class MyImage:
             axe  = plt.subplot2grid((4,2),(3,1))
             axe.plot(values,cummulative,color='blue')
 
-        plt.show()
+        plt.show()"""
 
+    @staticmethod
     def show_images(images:list):
-        DEFAULT_IMAGES_PER_ROW = 3
-        number_of_rows = len(images)//DEFAULT_IMAGES_PER_ROW + 1 if len(images) % DEFAULT_IMAGES_PER_ROW != 0 else len(images)
+        if len(images) > 3:
+            IMAGES_PER_ROW = 3
+            NUMBER_OF_ROWS = (len(images) // IMAGES_PER_ROW  + 1)
+        else:
+            IMAGES_PER_ROW = len(images)
+            NUMBER_OF_ROWS = 1
+        
+        for x in range(IMAGES_PER_ROW):
+                for y in range(NUMBER_OF_ROWS):
+                    i = x + y * IMAGES_PER_ROW
+                    if i >= len(images):continue 
+                    img = images[i]
+                    axe = plt.subplot2grid(
+                        (NUMBER_OF_ROWS,IMAGES_PER_ROW),
+                        (y,x))
+
+                    pil_img = Image.new("RGB",img.dimensions)
+                    pil_img.putdata(list(zip(img.r.flatten(),img.g.flatten(),img.b.flatten())))
+                    axe.imshow(pil_img)
+        plt.show()
+    
+    @staticmethod
+    def show_histograms(images:list,_type:str):
+        """
+        _type must be one of these variants h,nh,ch,cnh
+        """
+        HISTO_TYPES = ("h",'nh',"ch","cnh")
+        _type = _type.lower().strip()
+        if _type not in HISTO_TYPES:
+            raise ValueError(f"type of histogram {_type} is not supported please choose from {HISTO_TYPES}")
+        def get_histo(img:MyImage,_type:str):
+            match _type:
+                case "h":
+                    return img.histograme()
+                case "nh":
+                    return img.normilized_histograme()
+                case "ch":
+                    return img.cumulated_histograme()
+                case "cnh":
+                    return img.cumulative_normilized_histo()
+                case _:
+                    raise ValueError(f"type of histogram {_type} is not supported please choose from {HISTO_TYPES}")
+        
+        TITLES = {
+            "h":"FREQUENCY Histogram",
+            "nh":"Normalized Histogram",
+            "ch":"Cumulated Histogram",
+            "cnh":"Cumulated Normalized Histogram"
+        }
+
+        images:list[MyImage] = images
+        NUMBER_OF_ROWS = len(images)
+        IMAGES_PER_ROW = 3
         
         for i,img in enumerate(images):
-            axe = plt.subplot2grid((1,len(images)),(0,i)) 
-            pil_img = Image.new("RGB",img.dimensions)
-            pil_img.putdata(list(zip(img.r.flatten(),img.g.flatten(),img.b.flatten())))
-            axe.imshow(pil_img)
+            if img.mode == "RGB":
+                histo_r,histo_g,histo_b = get_histo(img,_type)
+                
+                axe = plt.subplot2grid(
+                    (NUMBER_OF_ROWS,IMAGES_PER_ROW),
+                    (i,0))
+                axe.plot(np.arange(256),histo_r,color='red')
+                axe.set_title(TITLES.get(_type,"UNKNOWEN HISTOGRAM") + " RED CHANNEL")
 
+                axe = plt.subplot2grid(
+                    (NUMBER_OF_ROWS,IMAGES_PER_ROW),
+                    (i,1))
+                axe.plot(np.arange(256),histo_g,color='green')
+                axe.set_title(TITLES.get(_type,"UNKNOWEN HISTOGRAM") + " GREEN CHANNEL")
+
+                axe = plt.subplot2grid(
+                    (NUMBER_OF_ROWS,IMAGES_PER_ROW),
+                    (i,2))
+                axe.plot(np.arange(256),histo_b,color='blue')
+                axe.set_title(TITLES.get(_type,"UNKNOWEN HISTOGRAM") + " BLUE CHANNEL")
+                
+            elif img.mode == 'L':
+                histo = get_histo(img,_type)
+                axe = plt.subplot2grid(
+                    (NUMBER_OF_ROWS,IMAGES_PER_ROW),
+                    (i,0),colspan=3)
+                axe.plot(np.arange(256),histo,color='gray')
+                axe.set_title(TITLES.get(_type,"UNKNOWEN HISTOGRAM") + " GRAY CHANNEL")
+                
+            else:
+                raise Exception(f"{img.mode} is unsupported")
+        
         plt.show()
