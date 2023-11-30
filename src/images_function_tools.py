@@ -117,6 +117,25 @@ class MyImage:
                 cpy[x_,y_] = v
         return cpy
     
+    # NOT WORKING
+    def translation_imp(self,x:int,y:int):
+        r_pad = l_pad = up_pad = bot_pad = 0
+        if x > 0:
+            l_pad = x
+        else:
+            r_pad = abs(x)
+        
+        if y > 0:
+            up_pad = y
+        else:
+            bot_pad = abs(y)
+        
+        r = np.pad(self.r,pad_width=((up_pad,bot_pad),(l_pad,r_pad)),mode='constant',constant_values=0)[bot_pad:self.height,r_pad:self.width]
+        g = np.pad(self.g,pad_width=((up_pad,bot_pad),(l_pad,r_pad)),mode='constant',constant_values=0)[bot_pad:self.height,r_pad:self.width]
+        b = np.pad(self.b,pad_width=((up_pad,bot_pad),(l_pad,r_pad)),mode='constant',constant_values=0)[bot_pad:self.height,r_pad:self.width]
+
+        return MyImage(r,g,b,self.mode)
+    
     def paste(self,x:int,y:int,w:int,h:int):
         """
         This function allow you to paste another image on the new image, the new image must be of a larger size

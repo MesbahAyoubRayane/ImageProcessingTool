@@ -102,7 +102,7 @@ class Application(ThemedTk):
         menues["Histogram based operations"].add_command(label='Histogram matching', command=self.histogram_based_operations_histogram_matching_menu_bare_command) # 2 -> 1 
 
         menues["Segmentation"].add_command(label='Object detection', command=None) # 1 -> n 
-        menues["Segmentation"].add_command(label='Edge detection', command=None) # 1 -> 1
+        menues["Segmentation"].add_command(label='Edge detection', command=self.segmentation_edge_detection_menu_bare_command) # 1 -> 1
 
         menues["Visualization"].add_command(label='Show Image', command=self.visualization_show_menu_bare_command) # 1 -> 0
         menues["Visualization"].add_command(label='Show Histogram', command=None) # 1 -> 0
@@ -124,6 +124,9 @@ class Application(ThemedTk):
     def __create_buttons__(self):
         self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command)
         self.cpy_btn = ttk.Button(self,text="Copy to top",command=self.btn_cpy_command)
+        self.clr_btn = ttk.Button(self,text="Clear",command=self.btn_clr_command)
+
+        self.clr_btn.pack(fill=tk.BOTH,padx=5,pady=3)
         self.cpy_btn.pack(fill=tk.BOTH,padx=5,pady=3) 
         self.dlt_btn.pack(fill=tk.BOTH,padx=5,pady=3)
 
@@ -399,7 +402,7 @@ class Application(ThemedTk):
             messagebox.showerror('ERROR',"THE WIDTH OF THE CANVAS MUST BE LARGER THAN THE IMAGE")
             return
         # H
-        h = simpledialog.askinteger("HEIGHT","ENTER THE HEIGHT OF THE SUB-IMAGE")
+        h = simpledialog.askinteger("HEIGHT","ENTER THE HEIGHT OF THE CANVAS")
         if h is None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
             return
@@ -806,6 +809,61 @@ class Application(ThemedTk):
         
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.bilateral_filter,(size,std_s,std_b),'o'))
         self.redraw_operation_stack_tree_view()
+    
+    # Segmentation
+    def segmentation_edge_detection_menu_bare_command(self):
+        if len(self.operation_stack) == 0:
+            messagebox.showerror("ERROR", "NO IMAGE WAS PROVIDED")
+            return
+
+        input_imgs = self.operation_stack[-1].imgs_out
+        if len(input_imgs) <= 0:
+            messagebox.showerror("ERROR", "ERROR NO IMAGE WAS FOUND THIS ERROR SHOUD NEVER HAPPEN CONTACT DEVS")
+            return
+
+        if len(input_imgs) > 1:
+            messagebox.showerror("ERROR",
+                                "THE LAST OPERATION GENERATED MORE THAN ONE IMAGES PLEASE COMBINE THEM USING OVERLAYING OR DISCARD THEM")
+            return
+        input_imgs = input_imgs[0]
+
+        threshold = simpledialog.askinteger("THRESHOLD", "ENTER THE VALUE OF THRESHOLD BETWEEN 1 and 255")
+        if threshold is None:
+            messagebox.showerror("ERROR", "THE OPERATION WAS CANCELLED")
+            return
+        if threshold <= 0:
+            messagebox.showerror('ERROR', "THRESHOLD OF THE EDGE DETECTION MUST BE POSITIVE")
+            return
+
+        if threshold > 255:
+            messagebox.showerror('ERROR', "THE TRESHOLD IS BIGGER THAN 255")
+            return
+
+        operation = simpledialog.askinteger("OPERATOR TYPE",
+                                            "CHOOSE THE OPERATOR FOR THE EDGE DETECTION\n1 FOR ROBERT\n2 FOR SOBEL\n3 FOR PREWITT")
+        if operation is None:
+            messagebox.showerror("ERROR", "THE OPERATION WAS CANCELLED")
+            return
+        if operation not in (1, 2, 3):
+            messagebox.showerror("ERROR", "UNSOPPRTED OPTION")
+            return
+        
+        if operation == 1:
+            self.operation_stack.append(
+                StackFrame(input_imgs, ift.MyImage.edge_detection_robert, (threshold,), 'o'))
+            
+        elif operation == 2:
+            self.operation_stack.append(
+                StackFrame(input_imgs, ift.MyImage.edge_detection_sobel, (threshold,), 'o'))
+        elif operation == 3:
+            self.operation_stack.append(
+                StackFrame(input_imgs, ift.MyImage.edges_detection_prewitt, (threshold,), 'o'))
+        else:
+            messagebox.showerror("ERROR",f"THERE IS NO OPERATOR FOR THE SELECTED OPTION {operation}")
+            return
+
+        self.redraw_operation_stack_tree_view()
+
     # VISUALISATION
     def visualization_show_menu_bare_command(self):
         """
@@ -839,6 +897,10 @@ class Application(ThemedTk):
             if i in selected_images:
                 new_operation_stack.append(sframe)
         self.operation_stack.extend(new_operation_stack)
+        self.redraw_operation_stack_tree_view()
+
+    def btn_clr_command(self):
+        self.operation_stack.clear()
         self.redraw_operation_stack_tree_view()
 
     # useful methods
