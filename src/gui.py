@@ -88,7 +88,8 @@ class Application(Window):
     At the end a binding function will be called to define behaviours
     """
     MAX_CLUSTERS_SIZE = 50
-
+    MAX_PAST_WIDTH = 5000
+    MAX_PAST_HEIGHT = 5000
     def __init__(self):
         super().__init__() 
         self.title("Image processing software")
@@ -412,6 +413,9 @@ class Application(Window):
         if w < input_imgs.width:
             messagebox.showerror('ERROR',"THE WIDTH OF THE CANVAS MUST BE LARGER THAN THE IMAGE")
             return
+        if w > Application.MAX_PAST_WIDTH:
+            messagebox.showerror("ERROR",f"YOU HAVE EXCEEDED THE MAX WIDTH OF AN IMAGE {Application.MAX_PAST_WIDTH}")
+            return 
         # H
         h = simpledialog.askinteger("HEIGHT","ENTER THE HEIGHT OF THE CANVAS")
         if h is None:
@@ -423,7 +427,9 @@ class Application(Window):
         if h < input_imgs.height:
             messagebox.showerror('ERROR',"THE HEIGHT OF THE CANVAS MUST BE LARGER THAT THE IMAGE")
             return
-
+        if h > Application.MAX_PAST_HEIGHT:
+            messagebox.showerror('ERROR',f"YOU HAVE EXCEEDED THE MAX HEIGHT OF AN IMAGE {Application.MAX_PAST_HEIGHT}")
+            return
         x = simpledialog.askinteger("X POSITION","ENTER THE X POSITION FOR THE UPPER LEFT CORNER WHERE TO PASTE THE IMAGE")
         if x is None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
