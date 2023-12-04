@@ -1,3 +1,7 @@
+from itertools import groupby
+from multiprocessing import Value
+from unittest import result
+from matplotlib.testing import set_font_settings_for_testing
 import numpy as np
 from PIL import Image
 from matplotlib import pyplot as plt
@@ -8,19 +12,29 @@ class MyImage:
     support two types of images 'RGB' an 'L' (gray scale)
     """
     MODES = 'RGB','L'
-    DEFAUL_GRAY_SCALE_COEF = (0.299,0.587,0.114) # this are the deafults values for transforming from rgb to gray scale
+    DEFAUL_GRAY_SCALE_COEF = 0.299,0.587,0.114 # this are the deafults values for transforming from rgb to gray scale
 
     def __init__(self,r:np.ndarray,g:np.ndarray,b:np.ndarray,mode:str):
         """
-        r,g,b are numpy matrices the must have the same shape (width*height)
+        r,g,b are numpy matrices they must have the same shape (width*height)
         mode : 'RGB' or 'L'
         """
         mode = mode.strip().upper()
         if mode not in MyImage.MODES: raise ValueError(f'Unsupported mode value {mode},mode must be L or RGB')
+        
         if r.ndim != 2 or g.ndim != 2 or b.ndim != 2:
             raise Exception('R,G,B chanels must be in a matrix form')
+        
         if not (r.shape == g.shape and r.shape == b.shape):
-            raise Exception('The provided arrays are not cohierant')
+            raise Exception('The provided arrays are not coherant')
+        
+        for x in r,g,b:
+            tmp = x.flatten() 
+            if (tmp < 0).any():
+                raise Exception("The image pixels values must be positive")
+            if (tmp > 255).any():
+                raise Exception("The imgae pixels values must be < 256")
+        
         self.mode = mode
         self.r,self.g,self.b = r.copy().astype(np.uint8),g.copy().astype(np.uint8),b.copy().astype(np.uint8)
 
@@ -104,35 +118,49 @@ class MyImage:
                 
         return rimg
 
-    # Geometric transformation
-    def translation(self,vec:tuple[float|int,float|int]):
-        """
-        translate the image by a vector (x,y) -> (x+u,y+v) 
-        """
-        cpy = MyImage.new(self.width,self.height,self.mode)
-        for x,y,*v in self.pixels():
-            x_ = x + vec[0]
-            y_ =y + vec[1]
-            if 0<=x_<self.width and 0<= y_ < self.height:
-                cpy[x_,y_] = v
-        return cpy
-    
-    # NOT WORKING
-    def translation_imp(self,x:int,y:int):
-        r_pad = l_pad = up_pad = bot_pad = 0
+    def translation(self,x:int,y:int):
+        x,y = int(x),int(y)
+        r,g,b = self.r.copy(),self.g.copy(),self.b.copy()
+        
+        W,H = self.width,self.height
+        x_start,y_start = 0,0
+        x_end,y_end = W,H
+        
         if x > 0:
-            l_pad = x
-        else:
-            r_pad = abs(x)
-        
+            r = np.pad(r,((0,0),(x,0)),'constant',constant_values=0)
+            g = np.pad(g,((0,0),(x,0)),'constant',constant_values=0)
+            b = np.pad(b,((0,0),(x,0)),'constant',constant_values=0)
+
+            x_start = 0
+            x_end = W 
+
+        elif x < 0:
+            r = np.pad(r,((0,0),(0,-x)),'constant',constant_values=0)
+            g = np.pad(g,((0,0),(0,-x)),'constant',constant_values=0)
+            b = np.pad(b,((0,0),(0,-x)),'constant',constant_values=0)
+            
+            x_start = -x
+            x_end = x_start + W
+
         if y > 0:
-            up_pad = y
-        else:
-            bot_pad = abs(y)
-        
-        r = np.pad(self.r,pad_width=((up_pad,bot_pad),(l_pad,r_pad)),mode='constant',constant_values=0)[bot_pad:self.height,r_pad:self.width]
-        g = np.pad(self.g,pad_width=((up_pad,bot_pad),(l_pad,r_pad)),mode='constant',constant_values=0)[bot_pad:self.height,r_pad:self.width]
-        b = np.pad(self.b,pad_width=((up_pad,bot_pad),(l_pad,r_pad)),mode='constant',constant_values=0)[bot_pad:self.height,r_pad:self.width]
+            r = np.pad(r,((y,0),(0,0)),'constant',constant_values=0)
+            g = np.pad(g,((y,0),(0,0)),'constant',constant_values=0)
+            b = np.pad(b,((y,0),(0,0)),'constant',constant_values=0)
+            
+            y_start = 0
+            y_end = H
+
+        elif y < 0:
+            r = np.pad(r,((0,-y),(0,0)),'constant',constant_values=0)
+            g = np.pad(g,((0,-y),(0,0)),'constant',constant_values=0)
+            b = np.pad(b,((0,-y),(0,0)),'constant',constant_values=0)
+
+            y_start = -y
+            y_end = y_start + H
+
+        r = r[y_start:y_end,x_start:x_end]
+        g = g[y_start:y_end,x_start:x_end]
+        b = b[y_start:y_end,x_start:x_end]
 
         return MyImage(r,g,b,self.mode)
     
@@ -160,7 +188,7 @@ class MyImage:
         In the implementation i'm doing a sum of each chanel , so the overlapping pixels will have a value of 255
         """
         img:MyImage = img
-        #if self.mode != img.mode: raise Exception("the images must be of the same mode")
+        
         if img.dimensions != self.dimensions: raise Exception(f"You can't lay an image of size {img.dimensions} on an image of size {self.dimensions} , the size must be the same")
         cpy_img = MyImage.new(self.width,self.height,self.mode)
 
@@ -1017,27 +1045,36 @@ class MyImage:
     
     # histogrames
     def histograme(self) -> np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
-        if self.mode == "L":
-            h = np.full((256,),fill_value=0)
-            for v in self.r.flatten():
-                h[v] += 1
-            return h
+        if self.mode == 'L':
+            histo = np.full(256,0)
+            pxl = self.r.flatten()
+            pxl.sort()
+            for p,r in groupby(pxl): 
+                histo[int(p)] = len(list(r))
+            return histo
         
         elif self.mode == 'RGB':
-            hr,hg,hb = np.full((256,),fill_value=0),np.full((256,),fill_value=0),np.full((256,),fill_value=0) 
-            for _,_,r,g,b in self.pixels():
-                hr[r] += 1
-                hg[g] += 1
-                hb[b] += 1
-            return hr,hg,hb
+            result = []
+            for x in self.r,self.g,self.b:
+                histo = np.full(256,0)
+                pxl = x.flatten()
+                pxl.sort()
+                for p in groupby(pxl): 
+                    p,r = int(p[0]),len(list(p[1]))
+                    histo[p] = r
+                result.append(histo)
+            return result[0],result[1],result[2]
+        
+        else:
+            raise ValueError(f"{self.mode} is not supported")
+
     
     def cumulated_histograme(self) ->  np.ndarray|tuple[np.ndarray,np.ndarray,np.ndarray]:
         if self.mode == "RGB":
             hr,hg,hb = self.histograme()
-            chr,chg,chb = np.full((256,),dtype=np.int32,fill_value=0),np.full((256,),dtype=np.int32,fill_value=0),np.full((256,),dtype=np.int32,fill_value=0)
-            assert hr.sum() == self.width * self.height
-            assert hg.sum() == self.width * self.height
-            assert hb.sum() == self.width * self.height
+            chr,chg,chb = np.full((256,),dtype=np.int32,fill_value=0),\
+            np.full((256,),dtype=np.int32,fill_value=0),\
+            np.full((256,),dtype=np.int32,fill_value=0)
             sum_r = sum_g = sum_b = 0
             for i in range(256):
                 sum_r += hr[i]
@@ -1364,10 +1401,11 @@ class MyImage:
         """
         _type must be one of these variants h,nh,ch,cnh
         """
-        HISTO_TYPES = ("h",'nh',"ch","cnh")
+        HISTO_TYPES = "h",'nh',"ch","cnh"
         _type = _type.lower().strip()
         if _type not in HISTO_TYPES:
             raise ValueError(f"type of histogram {_type} is not supported please choose from {HISTO_TYPES}")
+        
         def get_histo(img:MyImage,_type:str):
             match _type:
                 case "h":
@@ -1382,10 +1420,10 @@ class MyImage:
                     raise ValueError(f"type of histogram {_type} is not supported please choose from {HISTO_TYPES}")
         
         TITLES = {
-            "h":"FREQUENCY Histogram",
-            "nh":"Normalized Histogram",
-            "ch":"Cumulated Histogram",
-            "cnh":"Cumulated Normalized Histogram"
+            "h":"FREQUENCY HISTOGRAM",
+            "nh":"NORMALIZED HISTOGRAM",
+            "ch":"CUMULATED HISTOGRAM",
+            "cnh":"C/N HISTOGRAM"
         }
 
         images:list[MyImage] = images
