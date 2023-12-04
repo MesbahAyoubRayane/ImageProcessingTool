@@ -92,10 +92,17 @@ class Application(Window):
     MAX_PAST_WIDTH = 5000
     MAX_PAST_HEIGHT = 5000
     def __init__(self):
-        super().__init__(themename="superhero") 
+        super().__init__() #themename="superhero" 
         self.title("Image processing software")
-        self.geometry("900x500")
-        self.minsize("900",'500')
+        
+        # centering the window
+        W,H = 900,500
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x,y = ( screen_width - W )//2,(screen_height - H)//2
+        self.geometry(f"{W}x{H}+{x}+{y}")
+        self.minsize(W,H)
+
         self.__create_components__()
 
         # gloabl variables
@@ -165,14 +172,28 @@ class Application(Window):
         self.operation_stack_tree_view.heading('Args', text='Args')
 
         self.operation_stack_tree_view.pack(expand=True, fill=tk.BOTH)
+
+        # BINDING BEHAVIOURS
+        def dblclk_show_img(_):
+            if len(self.get_selected_images()) == 0:return
+            self.visualization_show_menu_bare_command()
+        
+        def dblclk_show_meta(_):
+            if len(self.get_selected_images()) == 0:return
+            self.visualization_show_meta_data_menu_bare_command()
+
+        self.operation_stack_tree_view.bind("<Double-1>",dblclk_show_img)
+        self.operation_stack_tree_view.bind("<Double-3>",dblclk_show_meta)
     
     def __create_buttons__(self):
-        self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command,bootstyle=ttkbootstrap.DANGER)   
-        self.cpy_btn = ttk.Button(self,text="Copy to top",command=self.btn_cpy_command,bootstyle=ttkbootstrap.PRIMARY)
-        self.clr_btn = ttk.Button(self,text="Clear",command=self.btn_clr_command,bootstyle=ttkbootstrap.SUCCESS)
+        self.dlt_btn = ttk.Button(self,text="Discard",command=self.btn_dlt_command,bootstyle=ttkbootstrap.DANGER)
+        self.clr_btn = ttk.Button(self,text="Clear",command=self.btn_clr_command,bootstyle=ttkbootstrap.DANGER)   
+        self.cpy_btn = ttk.Button(self,text="Copy",command=self.btn_cpy_command,bootstyle=ttkbootstrap.PRIMARY)
+        self.extract_btn = ttk.Button(self,text="Extract",command=self.btn_extract_command,bootstyle=ttkbootstrap.PRIMARY)
 
+        self.cpy_btn.pack(fill=tk.BOTH,padx=5,pady=3)
+        self.extract_btn.pack(fill=tk.BOTH,padx=5,pady=3)
         self.clr_btn.pack(fill=tk.BOTH,padx=5,pady=3)
-        self.cpy_btn.pack(fill=tk.BOTH,padx=5,pady=3) 
         self.dlt_btn.pack(fill=tk.BOTH,padx=5,pady=3)
 
     def run(self):
@@ -273,7 +294,7 @@ class Application(Window):
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
             return
         
-        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.translation,((x,y),),'o'))
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.translation,(x,y,),'o'))
         self.redraw_operation_stack_tree_view()
     
     def geometric_operations_rotation_menu_bare_command(self):
@@ -736,7 +757,7 @@ class Application(Window):
             messagebox.showerror('ERROR',"THE KERNEL SIZE IS BEGGER THAN THE IMAGE")
             return
         
-        distance = simpledialog.askinteger("DISTANCE TYPE","CHOOSE THE DISTANCE FOR THE LAPLACIAN FILTER 1 FOR MANHATTEN AND 2 FOR MAX")
+        distance = simpledialog.askinteger("DISTANCE TYPE","CHOOSE THE DISTANCE FOR THE LAPLACIAN FILTER \n1- MANHATTEN \n2- MAX")
         if distance is None:
             messagebox.showerror("ERROR","THE OPERATION WAS CANCELLED")
             return
@@ -859,6 +880,7 @@ class Application(Window):
             messagebox.showerror('ERROR',f"THE MAXIMUM SUPPORTED FOR K IS {Application.MAX_CLUSTERS_SIZE}")
             return
         use_tagging = messagebox.askyesno("TAGGING","WOULD YOU LIKE TO USE THE BINARY TAGGING ON EACH CLUSTER ?")
+
         
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.kmean,(k,),'o'))
         if use_tagging:
@@ -900,10 +922,6 @@ class Application(Window):
         self.meta_data_frame.run()
 
     def visualization_show_show_histograms(self):
-        if len(self.operation_stack) == 0:
-            messagebox.showerror("ERROR","NO IMAGE WAS PROVIDED")
-            return
-        
         imgs =  self.get_selected_images()
         if len(imgs) <= 0:
             messagebox.showerror("ERROR","ERROR NO IMAGE WAS SELCTED")
@@ -945,8 +963,21 @@ class Application(Window):
         self.redraw_operation_stack_tree_view()
 
     def btn_clr_command(self):
+        if not messagebox.askyesno("CONFIRMATION","ARE YOU SURE YOU WANT TO CLEAR THE OPERATIONS STACK ?"):return
         self.operation_stack.clear()
         self.redraw_operation_stack_tree_view()
+    
+    def btn_extract_command(self):
+        imgs = self.get_selected_images()
+        if len(imgs) <= 0:
+            messagebox.showerror("ERROR","ERROR NO IMAGE WAS SELCTED")
+            return
+        
+        for img in imgs:
+            self.operation_stack.append(StackFrame(img,ift.MyImage.copy,(),'o'))
+        
+        self.redraw_operation_stack_tree_view()
+
 
     # private methods
     def redraw_operation_stack_tree_view(self):
