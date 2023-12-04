@@ -1,7 +1,4 @@
 from itertools import groupby
-from multiprocessing import Value
-from unittest import result
-from matplotlib.testing import set_font_settings_for_testing
 import numpy as np
 from PIL import Image
 from matplotlib import pyplot as plt
@@ -1009,6 +1006,66 @@ class MyImage:
                 sub_imgs.append(img)
         return sub_imgs
     
+    def kmean_imp(self,k:int) -> list:
+        def compute_centers(clusters:np.ndarray) -> np.ndarray:
+            """
+            clusters is a matrix of size k,W*H of type bool
+            """
+            results:list[np.ndarray|None] = []
+            for cluster in clusters:
+                if (cluster == False).all():
+                    results.append(np.array([np.inf,np.inf,np.inf]))
+                    continue
+                center = np.array([self.r.flatten()[cluster].mean(),
+                          self.g.flatten()[cluster].mean(),
+                          self.b.flatten()[cluster].mean()])
+                results.append(center)
+            
+            return np.array(results)
+
+        k = int(k)
+        if k <= 1:ValueError("k must be > 1")
+        
+        W,H = self.dimensions
+        clusters:np.ndarray = np.full((k,W*H),fill_value=False,dtype=np.bool_)
+        
+        centers = set()
+        while len(centers) < k: centers.add((np.random.randint(0,256),np.random.randint(0,256),np.random.randint(0,256)))
+        centers  = np.array(list(centers)).reshape((-1,3))
+        R_chanel,G_chanel,B_chanel = self.r.flatten().reshape((-1,1)),self.g.flatten().reshape((-1,1)),self.b.flatten().reshape((-1,1)) 
+        while True:
+            distances = np.sqrt(
+                np.power(R_chanel - centers[:,0].reshape((1,-1)),2) +
+                np.power(G_chanel - centers[:,1].reshape((1,-1)),2) +
+                np.power(B_chanel - centers[:,2].reshape((1,-1)),2)).T
+            
+            neighrest_centers = distances.argsort(axis=0)
+            neighrest_centers = neighrest_centers[0,:]
+
+            
+            new_clusters = np.full((k,W*H),fill_value=False,dtype=np.bool_)
+            for i in range(W*H):
+                new_clusters[int(neighrest_centers[i]),i] = np.True_
+            
+            
+            if  np.array_equal(clusters,new_clusters) :break
+            clusters = new_clusters
+            centers = compute_centers(clusters)
+        
+        imgs = []
+        for cluster in clusters:
+            img = MyImage.new(W,H,self.mode)
+            i_s = np.arange(W*H)[cluster]
+            if len(i_s) == 0:continue
+            for i in i_s:
+                x,y = int(i%W),i//W
+                img[x,y] = self[x,y]
+            imgs.append(img)
+
+        return imgs
+
+
+
     def binary_tagging(self):
         def get_neighbores(x:int,y:int): return [(i,j) for i in (x,x+1,x-1) for j in (y,y-1,y+1)]
         m:np.ndarray =np.zeros(self.r.shape)
