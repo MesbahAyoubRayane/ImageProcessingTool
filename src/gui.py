@@ -159,7 +159,7 @@ class Application(Window):
 
         menues["Segmentation"].add_command(label='Object detection', command=self.segmentation_object_detection_menu_bare_command) # 1 -> n 
         menues["Segmentation"].add_command(label='Edge detection', command=self.segmentation_edge_detection_menu_bare_command) # 1 -> 1
-
+        
         menues["Visualization"].add_command(label='Show Image', command=self.visualization_show_menu_bare_command) # 1 -> 0
         menues["Visualization"].add_command(label='Show Histogram', command=self.visualization_show_show_histograms) # 1 -> 0
         menues["Visualization"].add_command(label='Show Metadata', command=self.visualization_show_meta_data_menu_bare_command) # 1 -> 0
@@ -342,7 +342,6 @@ class Application(Window):
         self.redraw_operation_stack_tree_view()
 
     def geometric_operations_rescale_menu_bare_command(self):
-        
         input_imgs =  self.get_selected_images()
         if len(input_imgs) == 0:
             messagebox.showerror("ERROR","NO IMAGE WAS SELECTED")
@@ -353,19 +352,37 @@ class Application(Window):
             return
         input_imgs = input_imgs[0]
 
-        x = simpledialog.askfloat("Re-SCALE FACTORS","ENTER THE RESCALING FACTOR FOR THE X AXE")
+        x = simpledialog.askfloat("Re-SCALE","ENTER THE NEW WIDTH\n - 0 USE OLD WIDTH ")
         if x is None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
             return
-        y = simpledialog.askfloat("Re-SCALE FACTORS","ENTER THE RESCALING FACTOR FOR THE Y AXE")
+        y = simpledialog.askfloat("Re-SCALE","ENTER THE NEW HEIGHT \n - 0 USE OLD HEIGHT")
         if y is None:
             messagebox.showerror("ERROR","OPERATION WAS CANCELED")
             return
         
-        if y <= 0 or x <= 0:
-            messagebox.showerror("ERROR","X FACTOR AND Y FACTOR MUST BE POSITIVE")
+        if y < 0 or x < 0:
+            messagebox.showerror("ERROR","WIDTH AND HEIGHT MUST BE POSITIVE")
             return
         
+        if y == 0:
+            y = input_imgs.height
+        if x == 0:
+            x = input_imgs.width
+
+        if x > Application.MAX_PAST_WIDTH:
+            messagebox.showerror("ERROR","EXCCEDING THE MAX POSSIBLE WIDTH")
+            return
+        
+        if y > Application.MAX_PAST_HEIGHT:
+            messagebox.showerror("ERROR","EXCCEDING THE MAX POSSIBLE HEIGHT")
+            return
+        
+
+        x /= input_imgs.width
+        y /= input_imgs.height  
+        
+
         self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.rescale,(x,y),'o'))
         self.redraw_operation_stack_tree_view()
     
@@ -882,7 +899,7 @@ class Application(Window):
         use_tagging = messagebox.askyesno("TAGGING","WOULD YOU LIKE TO USE THE BINARY TAGGING ON EACH CLUSTER ?")
 
         
-        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.kmean,(k,),'o'))
+        self.operation_stack.append(StackFrame(input_imgs,ift.MyImage.kmean_imp,(k,),'o'))
         if use_tagging:
             kmean_clusters = self.operation_stack[-1].imgs_out 
             for img in kmean_clusters:
@@ -914,7 +931,6 @@ class Application(Window):
         if len(imgs) <= 0:
             messagebox.showerror("ERROR","ERROR NO IMAGE WAS SELCTED")
             return
-        
         if self.meta_data_frame is not None:
             self.meta_data_frame.destroy()
         
@@ -940,6 +956,7 @@ class Application(Window):
             3:'ch',
             4:"cnh",
         }
+        ift.plt.clf()
         ift.MyImage.show_histograms(imgs,TYPE[h])
 
     # Button
