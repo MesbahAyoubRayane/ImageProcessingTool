@@ -1,12 +1,10 @@
+import random
 from itertools import groupby
 from typing import Self
 
-import PIL.Image
 import numpy as np
 from PIL import Image
 from matplotlib import pyplot as plt
-import random
-from numpy._typing import NDArray
 
 
 class MyImage:
@@ -1042,7 +1040,8 @@ class MyImage:
 
     # clustering algorithms
     def kmean(self, k: int) -> list[Self]:
-        COLOR_CHANEL = NDArray[np.uint8]
+        COLOR_CHANEL = np.ndarray
+
         def _kmean(r_chanel: COLOR_CHANEL, g_chanel: COLOR_CHANEL, b_chanel: COLOR_CHANEL, k: int) -> list[list]:
             SIZE: int = len(r_chanel)
             clusters: dict[tuple[int, int, int], set[int]] = {
@@ -1121,7 +1120,7 @@ class MyImage:
 
         return [img0, img1]
 
-    def binary_tagging(self,seperated:True) -> Self|list[Self]:
+    def binary_tagging(self, seperated: True) -> Self | list[Self]:
         def get_neighbores(x: int, y: int):
             return [(i, j) for i in (x, x + 1, x - 1) for j in (y, y - 1, y + 1)]
 
@@ -1142,14 +1141,14 @@ class MyImage:
                 tag += 1
 
         if seperated:
-            imgs = {t:MyImage.new(self.width, self.height, self.mode) for t in range(1,tag)}
+            imgs = {t: MyImage.new(self.width, self.height, self.mode) for t in range(1, tag)}
             for x in range(self.width):
                 for y in range(self.height):
                     if m[y, x] == 0:
                         continue
-                    imgs[int(m[y, x])].r[y, x] = self.r[y,x]
-                    imgs[int(m[y, x])].g[y, x] = self.g[y,x]
-                    imgs[int(m[y, x])].b[y, x] = self.g[y,x]
+                    imgs[int(m[y, x])].r[y, x] = self.r[y, x]
+                    imgs[int(m[y, x])].g[y, x] = self.g[y, x]
+                    imgs[int(m[y, x])].b[y, x] = self.g[y, x]
 
             return list(imgs.values())
         else:
@@ -1169,7 +1168,6 @@ class MyImage:
                     img.g[y, x] = g
                     img.b[y, x] = b
             return img
-
 
     # histogrames
     def histograme(self) -> np.ndarray | tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -1428,6 +1426,7 @@ class MyImage:
                 for y in range(self.height):
                     self.PIL_IMAGE.putpixel((x, y), self[x, y])
         return self.PIL_IMAGE
+
     @staticmethod
     def show_images(images: list):
         if len(images) > 3:
