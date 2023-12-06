@@ -6,7 +6,6 @@ import numpy as np
 from PIL import Image
 from matplotlib import pyplot as plt
 import random
-from numba import jit
 from numpy._typing import NDArray
 
 
