@@ -1,16 +1,16 @@
-import tkinter as tk
-from tkinter import ttk
-from typing import Callable
-import ttkbootstrap
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from ttkbootstrap.window import Window
-import images_function_tools as ift
-from tkinter import filedialog, messagebox, simpledialog
 import os
 import sys
+import tkinter as tk
 from copy import deepcopy
-import numpy as np
+from tkinter import filedialog, messagebox, simpledialog
+from tkinter import ttk
+from typing import Callable
+
+import ttkbootstrap
+from ttkbootstrap.window import Window
+
+import images_function_tools as ift
+
 
 class StackFrame:
     """
@@ -130,7 +130,6 @@ class Application(Window):
         self.__create__menu_bare__()
         self.__create_operations_stack__()
         self.__create_buttons__()
-
 
     def __create__menu_bare__(self):
         menu = tk.Menu(self)
