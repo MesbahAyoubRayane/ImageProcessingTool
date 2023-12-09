@@ -1,13 +1,14 @@
 import os
 import sys
-import tkinter as tk
 from copy import deepcopy
-from tkinter import filedialog, messagebox, simpledialog
-from tkinter import ttk
 from typing import Callable
 
+# gui improts
 import ttkbootstrap
 from ttkbootstrap.window import Window
+from tkinter import ttk
+from tkinter import filedialog, messagebox, simpledialog
+import tkinter as tk
 
 import images_function_tools as ift
 
@@ -198,6 +199,7 @@ class Application(Window):
                                            command=self.segmentation_object_detection_threshold_menu_bare_command)
         menues["Segmentation"].add_command(label='Binary Tagging',
                                            command=self.segmentation_binary_tagging_menu_bare_command)
+        
         menues["Segmentation"].add_separator()
         menues["Segmentation"].add_command(label='Edge detection',
                                            command=self.segmentation_edge_detection_menu_bare_command)  # 1 -> 1
@@ -421,13 +423,18 @@ class Application(Window):
         if w <= 0:
             messagebox.showerror("ERROR", "THE WIDTH MUST BE A POSITIVE INTEGER")
             return
+        if w > Application.MAX_IMG_WIDTH:
+            messagebox.showerror("ERROR","THE ENTERED WIDTH EXCCEED THE MAXIMUM WIDTH")
+            return
         h = simpledialog.askinteger("HEIGHT", "ENTER THE HEIGHT OF THE SUB-IMAGE")
         if h is None:
             return
         if h <= 0:
             messagebox.showerror("ERROR", "THE HEIGHT MUST BE A POSITIVE INTEGER")
             return
-
+        if h > Application.MAX_IMG_HEIGHT:
+            messagebox.showerror("ERROR","THE ENTERED HEIGHT EXCEED THE MAXIMMUM HEIGHT")
+            return
         self.operation_stack.append(StackFrame(input_imgs, ift.MyImage.cut, (x, y, w, h), 'o'))
         self.redraw_operation_stack_tree_view()
 
@@ -488,21 +495,31 @@ class Application(Window):
         if len(images) == 1:
             messagebox.showerror('ERROR', "CAN'T OVERLAY ONE IMAGE")
             return
-
+        
+        MODES = {
+            0:'SUM',
+            1:'MIN',
+            2:'MAX',
+            3:'MEAN'
+        }
+        mode = simpledialog.askinteger('SELECT OVERLAYING MODE',"0- SUM\n1- MIN\n2- MAX\n3- MEAN")
+        if mode is None:return
+        if mode not in MODES:
+            messagebox.showerror("ERROR","THE SELECTED OPTION IS INCORRECT")
+            return
+        mode = MODES[mode]
+        
         w = max([img.width for img in images])
         h = max([img.height for img in images])
 
+        N = len(images) - 2
         result = images[0]
         for img in images[1:-1]:
-            if img.width != w or img.height != h:
-                img = img.rescale(w / img.width, h / img.height)
-            result = result.lay(img)
-
-        if images[-1].dimensions != result.dimensions:
-            w, h = result.dimensions
-            result = result.rescale(images[-1].width / w, images[-1].height / h)
-
-        self.operation_stack.append(StackFrame(images[-1], ift.MyImage.lay, (result,), 'o'))
+            self.operation_stack.append(StackFrame(result, ift.MyImage.lay, (img,mode), 'o'))
+            result = self.operation_stack[-1].imgs_out[0]
+            self.operation_stack.pop()
+        img = images[-1]
+        self.operation_stack.append(StackFrame(result, ift.MyImage.lay, (img,mode), 'o'))
         self.redraw_operation_stack_tree_view()
 
     # PHOTOMETRIC OPERATIONS
@@ -518,19 +535,20 @@ class Application(Window):
         if input_imgs is None:
             return
 
-        factor = simpledialog.askinteger("FACTOR",
-                                         "ENTER THE FACTOR BETWEEN 1 < factor < 256\nNOTE: FACTOR MUST divide 256")
+        factor = simpledialog.askinteger("CHANEL SIZE",
+                                         "ENTER THE CHANEL SIZE \n- 2\n- 4\n- 8\n- 16\n- 32\n- 64\n- 128")
         if factor is None:
             return
-        if not (2 <= factor < 256):
-            messagebox.showerror('ERROR', "THE FACTOR MUST BE BETWEEN 2<= factor <256")
+        
+        if factor not in (2,4,8,16,32,64,128):
+            messagebox.showerror('ERROR', "WRONG OPTION")
             return
-        if 256 % factor != 0.:
-            messagebox.showerror('ERROR', "FACTOR MUST divide 256")
-            return
+        
+        factor = 256 // factor
         self.operation_stack.append(StackFrame(input_imgs, ift.MyImage.resolution_under_scaling, (factor,), 'o'))
         self.redraw_operation_stack_tree_view()
-
+    
+    
     # Histogram based operations
     def histogram_based_operations_translation_menu_bare_command(self):
         input_imgs = self.test_images_for_unary_operations()
@@ -835,14 +853,33 @@ class Application(Window):
         input_imgs = self.test_images_for_unary_operations()
         if input_imgs is None:
             return
-        threshold = simpledialog.askinteger("THRESHOLD VALUE", "ENTER A NUMBER BETWEEN 0 AND 255")
-        if threshold is None:
-            return
+        if input_imgs.mode == 'RGB':
+            threshold_r = simpledialog.askinteger("THRESHOLD VALUE", "ENTER THE VALUE OF THE THRESHOLD BETWEEN 0 AND 255\nFOR THE RED CHANEL")
+            if not (0 <= threshold_r < 256):
+                messagebox.showerror('ERROR', "THRESHOLD MUST BE BETWEEN 0 and 255")
+                return
+            threshold_g = simpledialog.askinteger("THRESHOLD VALUE", "ENTER THE VALUE OF THE THRESHOLD BETWEEN 0 AND 255\nFOR THE GREEN CHANEL")
+            if not (0 <= threshold_g < 256):
+                messagebox.showerror('ERROR', "THRESHOLD MUST BE BETWEEN 0 and 255")
+                return
+            threshold_b  = simpledialog.askinteger("THRESHOLD VALUE", "ENTER THE VALUE OF THE THRESHOLD BETWEEN 0 AND 255\nFOR THE BLUE CHANEL")
+            if not (0 <= threshold_b < 256):
+                messagebox.showerror('ERROR', "THRESHOLD MUST BE BETWEEN 0 and 255")
+                return
+            threshold = threshold_r,threshold_g,threshold_b
 
-        if not (0 <= threshold < 256):
-            messagebox.showerror('ERROR', "THRESHOLD MUST BE BETWEEN 0 and 255")
-            return
+        elif input_imgs.mode == 'L':
+            threshold = simpledialog.askinteger("THRESHOLD VALUE", "ENTER THE VALUE OF THE THRESHOLD BETWEEN 0 AND 255")
+            if threshold is None:
+                return
 
+            if not (0 <= threshold < 256):
+                messagebox.showerror('ERROR', "THRESHOLD MUST BE BETWEEN 0 and 255")
+                return
+        else:
+            messagebox.showerror("ENTERNAL ERROR",f"IMAGE OF TYPE {input_imgs.mode} IS UNSUPPORTED")
+            return
+        
         self.operation_stack.append(StackFrame(input_imgs, ift.MyImage.segmentation_by_threshold, (threshold,), 'o'))
         self.redraw_operation_stack_tree_view()
 
@@ -883,15 +920,14 @@ class Application(Window):
         h = simpledialog.askinteger('HISTOGRAM TYPE',
                                     "CHOOSE THE TYPE OF THE HISTOGRAM\n1- FREQUENCY HISTOGRAM\n2-NORMALIZED "
                                     "HISTOGRAM\n3-CUMULATED HISTOGRAM\n4-CUMULATED NORMALIZED HISTOGRAM")
-        if h is None:
-            return
+        if h is None: return
         if h not in (1, 2, 3, 4):
             messagebox.showerror('ERROR', "INCORRECT OPTION")
             return
 
         ift.plt.clf()
         ift.MyImage.show_histograms(imgs, {1: 'h', 2: 'nh', 3: 'ch', 4: "cnh"}[h])
-
+     
     # Button
     def btn_dlt_command(self):
         selected_images = self.get_selected_images_by_index()
