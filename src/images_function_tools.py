@@ -1,28 +1,36 @@
+from optparse import Option
+from pyclbr import Class
 import random
 from itertools import groupby
-from typing import Self
-
+from typing import Generator, Literal, Optional, Self
 import numpy as np
+import numpy.typing as npty
 from PIL import Image
 from matplotlib import pyplot as plt
 
 
-class MyImage:
+
+class MyImage: #
     """
     A class which contains all the functions previously learned in the image processing class:
     support two types of images 'RGB' and 'L' (gray scale)
     """
+    # typles aliases
+    COORDINATES = tuple[int,int]
+    RGB_VALUE = tuple[int,int,int]
+    RGB_PIXEL = tuple[int,int,int,int,int] # x,y,r,g,b
+    GRAY_VALUE = int
+    GRAY_PIXEL = tuple[int,int,int] # x,y,g
+
     MODES = 'RGB', 'L'
-    DEFAUL_GRAY_SCALE_COEF = 0.299, 0.587, 0.114
+    DEFAUL_GRAY_SCALE_COEF = 0.299, 0.587, 0.114 # these are the default values for transforming from rgb to gray scale
 
-    # these are the default values for transforming from rgb to gray scale
-
-    def __init__(self, r: np.ndarray, g: np.ndarray, b: np.ndarray, mode: str):
+    def __init__(self, r: npty.NDArray[np.uint8], g: npty.NDArray[np.uint8], b: npty.NDArray[np.uint8], mode: Literal['RGB','L']):
         """
         r,g,b are numpy matrices they must have the same shape (width*height)
         mode : 'RGB' or 'L'
         """
-        mode = mode.strip().upper()
+        mode = mode.strip().upper() # type: ignore
         if mode not in MyImage.MODES:
             raise ValueError(f'Unsupported mode value {mode},mode must be L or RGB')
 
@@ -42,33 +50,35 @@ class MyImage:
             if (tmp > 255).any():
                 raise Exception("The imgae pixels values must be < 256")
 
-        self.mode = mode
-        self.r, self.g, self.b = r.copy().astype(np.uint8), g.copy().astype(np.uint8), b.copy().astype(np.uint8)
+        self.mode:Literal['RGB','L'] = mode
+        self.r:npty.NDArray[np.uint8]  = r.copy().clip(0,255).astype(np.uint8)
+        self.g:npty.NDArray[np.uint8]  = g.copy().clip(0,255).astype(np.uint8)
+        self.b:npty.NDArray[np.uint8]  = b.copy().clip(0,255).astype(np.uint8)
 
         # THIS CONSTANTS ARE USED TO IMPROVE COMPUTATION TIME
-        self.PIL_IMAGE: Image.Image | None = None  # this will be used in visualization
+        self.PIL_IMAGE: Optional[Image.Image] = None  # this will be used in visualization
+       
         self.FREQUENCY_HISTOGRAM = None
         self.CUMULATED_FREQUENCY_HISTOGRAM = None
         self.NORMALIZED_FREQUENCY_HISTOGRAM = None
         self.CUMULATED_NORMALIZED_FREQUENCY_HISTOGRAM = None
-        self.MEAN = None
-        self.STD = None
-        self.MEDIAN = None
-        self.OUTLIERS = None
+
+        # constant value 
+        self.MEAN     : Optional[tuple[float,float,float]|float] = None
+        self.STD      : Optional[tuple[float,float,float]|float]= None
+        self.MEDIAN   : Optional[tuple[float,float,float]|float] = None
+        self.OUTLIERS : Optional[tuple[int,int,int]|int] = None
 
     @property
-    def width(self):
-        return len(self.r[0])
+    def width(self) -> int: return len(self.r[0])
 
     @property
-    def height(self):
-        return len(self.r)
+    def height(self) -> int: return len(self.r)
 
     @property
-    def dimensions(self):
-        return self.width, self.height
+    def dimensions(self) -> tuple[int,int]: return self.width, self.height
 
-    def pixels(self):
+    def pixels(self) -> Generator[RGB_PIXEL|GRAY_PIXEL,None,None]:
         """
         this function returns all the pixels of the image:
         if mode = rgb  ==> x,y,r,g,b
@@ -82,17 +92,17 @@ class MyImage:
             for x in range(self.width):
                 for y in range(self.height): yield x, y, self.r[y, x]
 
-    def __getitem__(self, indexes: tuple[int, int]) -> tuple[int, int, int]:
-        """
-        used to index the image 
-        P = img[x,y]
-        P == (r,g,b) if mode = RGB
-        P == (v,v,v) v is the gray scale value 
-        """
-        x, y = self.__test_indexes__(indexes[0], indexes[1])
-        return int(self.r[y, x]), int(self.g[y, x]), int(self.b[y, x])
+    def __getitem__(self, indexes: COORDINATES) -> RGB_VALUE|GRAY_VALUE:
+        x, y = self.__test_indexes__(indexes[0], indexes[1]) # test if indecies are correct
+        if self.mode == 'RGB':
+            return int(self.r[y, x]), int(self.g[y, x]), int(self.b[y, x]) 
+        elif self.mode == 'L':
+            return int(self.r[y,x])
+        else:
+            raise Exception(f"{self.mode} is unsupported")
+        
 
-    def __setitem__(self, indexes: tuple[int, int], value: tuple[int, int, int] | int):
+    def __setitem__(self, indexes: COORDINATES, value: RGB_VALUE|GRAY_VALUE):
         x, y = self.__test_indexes__(indexes[0], indexes[1])
         if self.mode.upper() == "RGB":
             if not isinstance(value, tuple) and not isinstance(value, list):
@@ -124,11 +134,11 @@ class MyImage:
             raise Exception(f"y value {y}, is greater than the height of the image {self.height}")
         return int(x), int(y)
 
-    def copy(self):
+    def copy(self) -> Self:
         # creat a deep copy of the image
         return MyImage(self.r, self.g, self.b, self.mode)
 
-    def cut(self, x: int, y: int, w: int, h: int):
+    def cut(self, x: int, y: int, w: int, h: int) -> Self:
         """
         return a sub_image from the original image starting from the point x,y (top-left) to x+w,y+h (bottom-right)
         """
@@ -145,44 +155,44 @@ class MyImage:
 
         return rimg
 
-    def translation(self, x: int, y: int):
-        x, y = int(x), int(y)
+    def translation(self, dx: int, dy: int) -> Self:
+        dx, dy = int(dx), int(dy)
         r, g, b = self.r.copy(), self.g.copy(), self.b.copy()
 
         W, H = self.width, self.height
         x_start, y_start = 0, 0
         x_end, y_end = W, H
 
-        if x > 0:
-            r = np.pad(r, pad_width=((0, 0), (x, 0)), mode='constant', constant_values=0)
-            g = np.pad(g, pad_width=((0, 0), (x, 0)), mode='constant', constant_values=0)
-            b = np.pad(b, pad_width=((0, 0), (x, 0)), mode='constant', constant_values=0)
+        if dx > 0:
+            r = np.pad(r, pad_width=((0, 0), (dx, 0)), mode='constant', constant_values=0)
+            g = np.pad(g, pad_width=((0, 0), (dx, 0)), mode='constant', constant_values=0)
+            b = np.pad(b, pad_width=((0, 0), (dx, 0)), mode='constant', constant_values=0)
 
             x_start = 0
             x_end = W
 
-        elif x < 0:
-            r = np.pad(r, ((0, 0), (0, -x)), 'constant', constant_values=0)
-            g = np.pad(g, ((0, 0), (0, -x)), 'constant', constant_values=0)
-            b = np.pad(b, ((0, 0), (0, -x)), 'constant', constant_values=0)
+        elif dx < 0:
+            r = np.pad(r, ((0, 0), (0, -dx)), 'constant', constant_values=0)
+            g = np.pad(g, ((0, 0), (0, -dx)), 'constant', constant_values=0)
+            b = np.pad(b, ((0, 0), (0, -dx)), 'constant', constant_values=0)
 
-            x_start = -x
+            x_start = -dx
             x_end = x_start + W
 
-        if y > 0:
-            r = np.pad(r, ((y, 0), (0, 0)), 'constant', constant_values=0)
-            g = np.pad(g, ((y, 0), (0, 0)), 'constant', constant_values=0)
-            b = np.pad(b, ((y, 0), (0, 0)), 'constant', constant_values=0)
+        if dy > 0:
+            r = np.pad(r, ((dy, 0), (0, 0)), 'constant', constant_values=0)
+            g = np.pad(g, ((dy, 0), (0, 0)), 'constant', constant_values=0)
+            b = np.pad(b, ((dy, 0), (0, 0)), 'constant', constant_values=0)
 
             y_start = 0
             y_end = H
 
-        elif y < 0:
-            r = np.pad(r, ((0, -y), (0, 0)), 'constant', constant_values=0)
-            g = np.pad(g, ((0, -y), (0, 0)), 'constant', constant_values=0)
-            b = np.pad(b, ((0, -y), (0, 0)), 'constant', constant_values=0)
+        elif dy < 0:
+            r = np.pad(r, ((0, -dy), (0, 0)), 'constant', constant_values=0)
+            g = np.pad(g, ((0, -dy), (0, 0)), 'constant', constant_values=0)
+            b = np.pad(b, ((0, -dy), (0, 0)), 'constant', constant_values=0)
 
-            y_start = -y
+            y_start = -dy
             y_end = y_start + H
 
         r = r[y_start:y_end, x_start:x_end]
@@ -191,7 +201,7 @@ class MyImage:
 
         return MyImage(r, g, b, self.mode)
 
-    def paste(self, x: int, y: int, w: int, h: int):
+    def paste(self, x: int, y: int, w: int, h: int) -> Self:
         """
         This function allow you to paste another image on the new image, the new image must be of a larger size
         for it to contain the old image
@@ -208,35 +218,80 @@ class MyImage:
 
         return img
 
-    def lay(self, img: Self):
+    def lay(self, img: Self,mode:Literal["SUM","MAX","MIN","MEAN"]) -> Self:
         """
-        take an image as an argument and lay the first image on the second resulting a new image containing both
+        take an image as an argument and lay the first image on the second ,resulting on a new image containing both
         Note:
-        - In the implementation i'm doing a sum of each chanel , so the overlapping pixels will have a value of 255
         - If the images have diffrent sizes , the provided image will be scaled to self
+        mode:must be one of these options
+        SUM  : pixel[x,y] = SUM[self[x,y],img[x,y]]
+        MAX  : pixel[x,y] = MAX[self[x,y],img[x,y]]
+        MIN  : pixel[x,y] = MIN[self[x,y],img[x,y]]
+        MEAN : pixel[x,y] = MEAN[self[x,y],img[x,y]]
         """
+        MODES = 'SUM','MAX','MIN','MEAN'
+        mode = mode.upper().strip() # type: ignore
+        if mode not in MODES: raise ValueError(f"selected overaying mode {mode} is unsupported")
+        
         if self.dimensions != img.dimensions:
             # scaling img
             x_fct = self.width / img.width
             y_fct = self.height / img.height
             img = img.rescale(x_fct, y_fct)
 
-        cpy_img = MyImage.new(self.width, self.height, self.mode)
+        r:npty.NDArray[np.uint8]
+        g:npty.NDArray[np.uint8]
+        b:npty.NDArray[np.uint8]
 
-        cpy_img.r = (self.r.flatten().astype(np.uint32) + img.r.flatten().astype(np.uint32)).clip(0, 255).astype(
-            np.uint8).reshape(self.r.shape)
-        cpy_img.g = (self.g.flatten().astype(np.uint32) + img.g.flatten().astype(np.uint32)).clip(0, 255).astype(
-            np.uint8).reshape(self.g.shape)
-        cpy_img.b = (self.b.flatten().astype(np.uint32) + img.b.flatten().astype(np.uint32)).clip(0, 255).astype(
-            np.uint8).reshape(self.b.shape)
+        if mode == "SUM":
+            r = (self.r.flatten().astype(np.uint32) + img.r.flatten().astype(np.uint32)).clip(0, 255).astype(np.uint8).reshape(self.r.shape)
+            g = (self.g.flatten().astype(np.uint32) + img.g.flatten().astype(np.uint32)).clip(0, 255).astype(np.uint8).reshape(self.g.shape)
+            b = (self.b.flatten().astype(np.uint32) + img.b.flatten().astype(np.uint32)).clip(0, 255).astype(np.uint8).reshape(self.b.shape)
+        
+        elif mode == "MAX":
+            r = np.concatenate([
+                self.r.flatten().reshape((1,-1)),
+                img.r.flatten().reshape((1,-1))],
+                axis=0).max(axis=0).clip(0,255).astype(np.uint8)
+        
+            g = np.concatenate([
+                self.g.flatten().reshape((1,-1)),
+                img.g.flatten().reshape((1,-1))],
+                axis=0).max(axis=0).clip(0,255).astype(np.uint8)
+        
+            b = np.concatenate([
+                self.b.flatten().reshape((1,-1)),
+                img.b.flatten().reshape((1,-1))],
+                axis=0).max(axis=0).clip(0,255).astype(np.uint8)
+        
+        elif mode =='MIN':
+            r = np.concatenate([
+                self.r.flatten().reshape((1,-1)),
+                img.r.flatten().reshape((1,-1))],
+                axis=0).min(axis=0).clip(0,255).astype(np.uint8)
+            
+            g = np.concatenate([
+                self.g.flatten().reshape((1,-1)),
+                img.g.flatten().reshape((1,-1))],
+                axis=0).min(axis=0).clip(0,255).astype(np.uint8)
+            
+            b = np.concatenate([
+                self.b.flatten().reshape((1,-1)),
+                img.b.flatten().reshape((1,-1))],
+                axis=0).min(axis=0).clip(0,255).astype(np.uint8)
+        
+        elif mode == 'MEAN':
+            r = (0.5*(self.r.flatten().astype(np.float64) + img.r.flatten().astype(np.float64))).clip(0, 255).astype(np.uint8).reshape(self.r.shape)
+            g = (0.5*(self.g.flatten().astype(np.float64) + img.g.flatten().astype(np.float64))).clip(0, 255).astype(np.uint8).reshape(self.g.shape)
+            b = (0.5*(self.b.flatten().astype(np.float64) + img.b.flatten().astype(np.float64))).clip(0, 255).astype(np.uint8).reshape(self.b.shape)
+        
+        else:
+            raise ValueError(f"selected overaying mode {mode} is unsupported")
 
-        return cpy_img
+        return MyImage(r.reshape(self.r.shape),g.reshape(self.r.shape),b.reshape(self.r.shape),self.mode)
 
-    def reflect(self, axe: str) -> Self:
-        """
-        mirrors the image on the horizontal  or vertical axes : ['v','h']
-        """
-        axe = axe.lower()
+    def reflect(self, axe: Literal["H","V"]) -> Self:
+        axe = axe.lower().strip()  # type: ignore
         if axe not in ('h', 'v'): raise Exception("axe must be v or h")
 
         if axe == 'v':
@@ -277,7 +332,7 @@ class MyImage:
                 rotated_img[u, v] = self[x, y]
         return rotated_img
 
-    def rescale(self, x_scaling_factor: float, y_scaling_factor: float):
+    def rescale(self, x_scaling_factor: float, y_scaling_factor: float) -> Self:
         if x_scaling_factor <= 0 or y_scaling_factor <= 0:
             raise ValueError("The selected factors are incorrect")
 
@@ -295,7 +350,7 @@ class MyImage:
 
         return scaled_img
 
-    def resolution_under_scaling(self, factor: int):
+    def resolution_under_scaling(self, factor: int) -> Self:
         """
         this function divide the range of each chanel into X bages and affect the mean of each bag to the colors laying inside the range
         exemple:
@@ -310,11 +365,10 @@ class MyImage:
             raise ValueError(f"256 must be divisibale by fcator but 256 % {factor} != 0")
 
         img = MyImage.new(self.width, self.height, self.mode)
-        backets = {i // factor: (i + factor + i) // 2 for i in range(0, 256, factor)}
+        backets = {i // factor: (2*i + factor) // 2 for i in range(0, 256, factor)}  # each backet will map to to a the new color of the backet
 
         def f(x):
             return backets[x]
-
         f = np.vectorize(f)
 
         img.r = f((self.r.flatten() / factor).astype(np.uint32)).astype(np.uint8).reshape(self.r.shape)
@@ -322,7 +376,7 @@ class MyImage:
         img.b = f((self.b.flatten() / factor).astype(np.uint32)).astype(np.uint8).reshape(self.b.shape)
 
         return img
-
+    
     # histogram based operations
     def histo_translation(self, t: int):
         nr = np.clip(self.r.astype(np.int32) + t, 0, 255).astype(np.uint8)
@@ -331,12 +385,12 @@ class MyImage:
         return MyImage(nr, ng, nb, self.mode)
 
     def histo_inverse(self):
-        r = 255 - np.array(self.r)
-        g = 255 - np.array(self.g)
-        b = 255 - np.array(self.b)
+        r:npty.NDArray[np.uint8] = (255 - self.r.astype(np.int16)).astype(np.uint8)
+        g:npty.NDArray[np.uint8] = (255 - self.g.astype(np.int16)).astype(np.uint8)
+        b:npty.NDArray[np.uint8] = (255 - self.b.astype(np.int16)).astype(np.uint8)
         return MyImage(r, g, b, self.mode)
 
-    def histo_expansion_dynamique(self):
+    def histo_expansion_dynamique(self) -> Self:
         """
         Note before using this function you need to remove outliers because then can change the results dramaticly
         This function is just a simple normalization function between 0 and 255 , thus outliers have an important effect on the function
@@ -364,35 +418,36 @@ class MyImage:
         else:
             raise Exception(f"{self.mode} is not supported")
 
-    def histo_equalisation(self):
+    def histo_equalisation(self) -> Self:
         """ use the cumulative histograme to improve contraste"""
         if self.mode == "RGB":
             cdf_r, cdf_g, cdf_b = self.cumulative_normalized_histo()
             cp_img = self.copy()
-            for x, y, r, g, b in self.pixels():
+            for x, y, r, g, b in self.pixels(): # type: ignore
                 cp_img[x, y] = (int(cdf_r[r] * 255), int(cdf_g[g] * 255), int(cdf_b[b] * 255))
+        
         elif self.mode == 'L':
-            cdf: np.ndarray = self.cumulative_normalized_histo()
+            cdf: npty.NDArray[np.int32] = self.cumulative_normalized_histo() # type: ignore 
             cp_img = self.copy()
-            for x, y, v in cp_img.pixels():
+            for x, y, v in cp_img.pixels(): # type: ignore
                 cp_img[x, y] = int(255 * cdf[int(v)])
         else:
             raise Exception(f"{self.mode} is unsupported")
         return cp_img
 
-    def histo_matching(self, model: Self):
+    def histo_matching(self, model: Self) -> Self:
         """use an image as a model for another image"""
         if self.mode != model.mode:
             raise ValueError("The selected image model doesn't have the same mode as the modeled image")
         cpyimg = MyImage.new(self.width, self.height, self.mode)
         if self.mode == "L":
-            cnh_model: np.ndarray = model.cumulative_normalized_histo()
-            for x, y, v in self.pixels():
+            cnh_model: npty.NDArray[np.uint8] = model.cumulative_normalized_histo() # type:ignore
+            for x, y, v in self.pixels(): # type:ignore
                 cpyimg[x, y] = int(255 * cnh_model[v])
 
         elif self.mode == "RGB":
             cnh_model_r, cnh_model_g, cnh_model_b = model.cumulative_normalized_histo()
-            for x, y, r, g, b in self.pixels():
+            for x, y, r, g, b in self.pixels(): # type:ignore
                 cpyimg[x, y] = (int(255 * cnh_model_r[r]), int(255 * cnh_model_g[g]), int(255 * cnh_model_b[b]))
 
         else:
@@ -401,12 +456,12 @@ class MyImage:
 
         # filters
 
-    def gray_scale(self):
+    def gray_scale(self) -> Self:
         coef = MyImage.DEFAUL_GRAY_SCALE_COEF
         Gray = np.array((self.r * coef[0] + self.g * coef[1] + self.b * coef[2]) / sum(coef), dtype=np.uint8)
         return MyImage(Gray, Gray, Gray, 'L')
 
-    def mean_filter(self, size: int):
+    def mean_filter(self, size: int) -> Self:
         if isinstance(size, int):
             if size < 2:
                 raise ValueError(f'size must be > 2')
@@ -446,7 +501,7 @@ class MyImage:
         return copy_img
 
     # TODO this function can be improved using two convolution the first on the x axis and the second on the y axes
-    def gaussian_filter(self, size: int, std: float):
+    def gaussian_filter(self, size: int, std: float) -> Self:
         if isinstance(size, int):
             if size < 2:
                 raise ValueError(f'size must be > 1')
@@ -528,7 +583,7 @@ class MyImage:
             raise ValueError(f"{self.mode} is not supported")
 
     # TODO if i have time this is a good filter to implement
-    def bilateral_filter(self, size: int, std_spatial_gaussian: float, std_brightness_gaussian: float):
+    def bilateral_filter(self, size: int, std_spatial_gaussian: float, std_brightness_gaussian: float) -> Self:
         size = int(size)
         std_s = float(std_spatial_gaussian)
         std_b = float(std_brightness_gaussian)
@@ -644,7 +699,7 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not supported")
 
-    def median_filter(self, size: int):
+    def median_filter(self, size: int) -> Self:
         if isinstance(size, int):
             if size < 2:
                 raise ValueError(f'size must be > 2')
@@ -701,7 +756,7 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not supported")
 
-    def min_filter(self, size: int):
+    def min_filter(self, size: int) -> Self:
         if isinstance(size, int):
             if size < 2:
                 raise ValueError(f'size must be > 2')
@@ -758,7 +813,7 @@ class MyImage:
         else:
             raise ValueError(f"{self.mode} is not supported")
 
-    def max_filter(self, size: int):
+    def max_filter(self, size: int) -> Self:
         if isinstance(size, int):
             if size < 2:
                 raise ValueError(f'size must be > 2')
@@ -812,7 +867,7 @@ class MyImage:
             raise ValueError(f"{self.mode} is not supported")
         return cpy_img
 
-    def laplacian_sharpning_filter(self, distance: str, size: int):
+    def laplacian_sharpning_filter(self, distance: str, size: int) -> Self:
         """
         distance must be on of these variants : MANHATTAN,MAX
         size : is an odd positive number
@@ -860,7 +915,7 @@ class MyImage:
 
         return copy_img
 
-    def edge_detection_robert(self, threshold: int):
+    def edge_detection_robert(self, threshold: int) -> Self:
         kernel_diag = np.array([[-1, 0], [0, 1]]).reshape((1, 2, 2))
         kernel_rev_diag = np.array([[0, -1], [1, 0]]).reshape((1, 2, 2))
 
@@ -912,7 +967,7 @@ class MyImage:
 
         return MyImage(G_r, G_g, G_b, self.mode)
 
-    def edge_detection_sobel(self, threshold: int):
+    def edge_detection_sobel(self, threshold: int) -> Self:
         """
         threshold is an integer value between 0 and 255 , the lower it is the more daitaills will be detected as an edge
         """
@@ -975,7 +1030,7 @@ class MyImage:
 
         return MyImage(G_r, G_g, G_b, self.mode)
 
-    def edges_detection_prewitt(self, threshold: int):
+    def edges_detection_prewitt(self, threshold: int) -> Self:
         """
         threshold is an integer value between 0 and 255 , the lower it is the more daitaills will be detected as an edge
         """
@@ -1038,7 +1093,6 @@ class MyImage:
 
         return MyImage(G_r, G_g, G_b, self.mode)
 
-    # clustering algorithms
     def kmean(self, k: int) -> list[Self]:
         COLOR_CHANEL = np.ndarray
 
@@ -1092,21 +1146,30 @@ class MyImage:
             imgs.append(img)
         return imgs
 
-    def segmentation_by_threshold(self, threshold: int) -> list[Self]:
-        threshold = int(threshold)
-        if not (0 <= threshold < 256):
-            raise ValueError("Threshold must be between 0 and 255")
+    def segmentation_by_threshold(self, threshold: int|tuple[int,int,int]) -> list[Self]:
+        if self.mode == 'L':
+            if not (0 <= threshold < 256): # type:ignore
+                raise ValueError("Threshold must be between 0 and 255")
+        elif self.mode == 'RGB':
+            threshold_r,threshold_g,threshold_b = threshold # type:ignore
+            if not (0 <= threshold_r < 256):
+                raise ValueError("R Threshold must be between 0 and 255")
+            if not (0 <= threshold_g < 256):
+                raise ValueError("G Threshold must be between 0 and 255")
+            if not (0 <= threshold_b < 256):
+                raise ValueError("B Threshold must be between 0 and 255")
+
         img0 = MyImage.new(self.width, self.height, self.mode)
         img1 = MyImage.new(self.width, self.height, self.mode)
 
         if self.mode == 'RGB':
-            img0.r[self.r > threshold] = self.r[self.r > threshold].copy()
-            img0.g[self.g > threshold] = self.g[self.g > threshold].copy()
-            img0.b[self.b > threshold] = self.b[self.b > threshold].copy()
+            img0.r[self.r > threshold_r] = self.r[self.r > threshold_r].copy() # type:ignore
+            img0.g[self.g > threshold_g] = self.g[self.g > threshold_g].copy() # type:ignore
+            img0.b[self.b > threshold_b] = self.b[self.b > threshold_b].copy() # type:ignore
 
-            img1.r[self.r <= threshold] = self.r[self.r <= threshold].copy()
-            img1.g[self.g <= threshold] = self.g[self.g <= threshold].copy()
-            img1.b[self.b <= threshold] = self.b[self.b <= threshold].copy()
+            img1.r[self.r <= threshold_r] = self.r[self.r <= threshold_r].copy() # type:ignore
+            img1.g[self.g <= threshold_g] = self.g[self.g <= threshold_g].copy() # type:ignore
+            img1.b[self.b <= threshold_b] = self.b[self.b <= threshold_b].copy() # type:ignore
 
         elif self.mode == 'L':
             img0.r[self.r > threshold] = self.r[self.r > threshold].copy()
@@ -1115,40 +1178,41 @@ class MyImage:
             img1.r[self.r <= threshold] = self.r[self.r <= threshold].copy()
             img1.g = img1.b = img1.r
 
-        else:
-            raise Exception(f"{self.mode} is unsupported")
+        else: raise Exception(f"{self.mode} is unsupported")
 
         return [img0, img1]
 
-    def binary_tagging(self, seperated: True) -> Self | list[Self]:
-        def get_neighbores(x: int, y: int):
-            return [(i, j) for i in (x, x + 1, x - 1) for j in (y, y - 1, y + 1)]
-
-        m: np.ndarray = np.zeros(self.r.shape)
+    def binary_tagging(self, seperated: bool) -> Self | list[Self]:
+        def get_neighbores(x: int, y: int): return [(x-1,y-1),(x-1,y),(x-1,y+1),(x,y-1),(x,y+1),(x+1,y-1),(x+1,y),(x+1,y+1)]
+        
+        tag_matrix: np.ndarray = np.zeros(self.r.shape)
         colored: np.ndarray = (self.r > 0) | (self.g > 0) | (self.b > 0)
         tag = 1
+        
         for x in range(self.width):
             for y in range(self.height):
-                if m[y, x] != 0 or colored[y, x] == False: continue
-                m[y, x] = tag
+                if tag_matrix[y, x] != 0 or colored[y, x] == False: continue
+                tag_matrix[y, x] = tag
                 neighbores = get_neighbores(x, y)
                 while len(neighbores) > 0:
                     xn, yn = neighbores.pop()
                     if not (0 <= xn < self.width and 0 <= yn < self.height): continue
-                    if m[yn, xn] != 0 or colored[yn, xn] == False: continue
-                    m[yn, xn] = tag
-                    neighbores.extend(get_neighbores(xn, yn))
+
+                    # if the pixel is already taged or the pixel is not colored
+                    # note this condition (tag_matrix[yn, xn] != 0) can be changed just to tag_matrix[yn, xn] != tag
+                    if tag_matrix[yn, xn] != 0 or (colored[yn, xn] == False): continue
+                    tag_matrix[yn, xn] = tag
+                    neighbores.extend(set(get_neighbores(xn, yn)))
                 tag += 1
 
         if seperated:
             imgs = {t: MyImage.new(self.width, self.height, self.mode) for t in range(1, tag)}
             for x in range(self.width):
                 for y in range(self.height):
-                    if m[y, x] == 0:
-                        continue
-                    imgs[int(m[y, x])].r[y, x] = self.r[y, x]
-                    imgs[int(m[y, x])].g[y, x] = self.g[y, x]
-                    imgs[int(m[y, x])].b[y, x] = self.g[y, x]
+                    if tag_matrix[y, x] == 0: continue
+                    imgs[int(tag_matrix[y, x])].r[y, x] = self.r[y, x]
+                    imgs[int(tag_matrix[y, x])].g[y, x] = self.g[y, x]
+                    imgs[int(tag_matrix[y, x])].b[y, x] = self.g[y, x]
 
             return list(imgs.values())
         else:
@@ -1159,18 +1223,18 @@ class MyImage:
                             np.random.randint(0, 256, dtype=np.uint8)))
             colors = list(colors)
             img = MyImage.new(self.width, self.height, self.mode)
+            
             for x in range(self.width):
                 for y in range(self.height):
-                    if m[y, x] == 0:
-                        continue
-                    r, g, b = colors[int(m[y, x])]
+                    if tag_matrix[y, x] == 0: continue
+                    r, g, b = colors[int(tag_matrix[y, x])]
                     img.r[y, x] = r
                     img.g[y, x] = g
                     img.b[y, x] = b
             return img
 
     # histogrames
-    def histograme(self) -> np.ndarray | tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def histograme(self) -> npty.NDArray | tuple[npty.NDArray, npty.NDArray, npty.NDArray]:
         if self.FREQUENCY_HISTOGRAM is None:
             if self.mode == 'L':
                 histo = np.full(256, 0)
@@ -1197,7 +1261,7 @@ class MyImage:
 
         return self.FREQUENCY_HISTOGRAM
 
-    def cumulated_histograme(self) -> np.ndarray | tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def cumulated_histograme(self) -> npty.NDArray| tuple[npty.NDArray, npty.NDArray, npty.NDArray]:
         if self.CUMULATED_FREQUENCY_HISTOGRAM is None:
             if self.mode == "RGB":
                 hr, hg, hb = self.histograme()
@@ -1222,14 +1286,14 @@ class MyImage:
                 for i in range(256):
                     sum_gray += hgray[i]
                     chgray[i] = sum_gray
-                self.CUMULATED_FREQUENCY_HISTOGRAM: np.ndarray = chgray
+                self.CUMULATED_FREQUENCY_HISTOGRAM = chgray
 
             else:
                 raise ValueError(f"{self.mode} is not supported")
 
         return self.CUMULATED_FREQUENCY_HISTOGRAM
 
-    def normalized_histograme(self) -> np.ndarray | tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def normalized_histograme(self) -> npty.NDArray | tuple[npty.NDArray, npty.NDArray, npty.NDArray]:
         if self.NORMALIZED_FREQUENCY_HISTOGRAM is None:
             if self.mode == "RGB":
                 hr, hg, hb = self.histograme()
@@ -1250,7 +1314,7 @@ class MyImage:
 
         return self.NORMALIZED_FREQUENCY_HISTOGRAM
 
-    def cumulative_normalized_histo(self) -> np.ndarray | tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def cumulative_normalized_histo(self) -> npty.NDArray | tuple[npty.NDArray, npty.NDArray, npty.NDArray]:
         if self.CUMULATED_NORMALIZED_FREQUENCY_HISTOGRAM is None:
             if self.mode == 'RGB':
                 nhr, nhg, nhb = self.normalized_histograme()
@@ -1282,9 +1346,9 @@ class MyImage:
     def mean(self) -> tuple[float, float, float] | float:
         if self.MEAN is None:
             if self.mode == "RGB":
-                self.MEAN = self.r.flatten().mean(), self.g.flatten().mean(), self.b.flatten().mean()
+                self.MEAN = float(self.r.flatten().mean()), float(self.g.flatten().mean()), float(self.b.flatten().mean())
             elif self.mode == "L":
-                self.MEAN = self.r.flatten().mean()
+                self.MEAN = float(self.r.flatten().mean())
             else:
                 raise Exception(f"{self.mode} is unsupported mode")
         return self.MEAN
@@ -1299,7 +1363,7 @@ class MyImage:
                 raise Exception(f"{self.mode} is unsupported mode")
         return self.STD
 
-    def median(self) -> tuple[float, float, float] | int:
+    def median(self) -> tuple[float, float, float] | float:
         if self.MEDIAN is None:
             if self.mode == "RGB":
                 self.MEDIAN = np.median(self.r.flatten()), np.median(self.g.flatten()), np.median(self.b.flatten())
@@ -1336,7 +1400,7 @@ class MyImage:
                 raise Exception(f"{self.mode} is not supported")
         return self.OUTLIERS
 
-    def index(self) -> np.ndarray:
+    def index(self) -> npty.NDArray:
         if self.mode == 'RGB':
             A, B, C = self.normalized_histograme()
             a, b, c = self.cut(0, 0, self.width // 2, self.height // 2).normalized_histograme()
@@ -1359,23 +1423,23 @@ class MyImage:
         return np.concatenate([A, B, C, a, b, c, d, e, f, g, h, i, j, k, l])
 
     @staticmethod
-    def new(w: int, h: int, mode: str):
+    def new(w: int, h: int, mode: Literal['RGB','L']):
         """
         create a new image having width w and hight h , and initilise the rgb matrices to zero 
         """
-        mode = mode.upper()
+        mode = mode.upper() # type: ignore
         if mode not in MyImage.MODES: raise ValueError(f'the selected mode <{mode}> is not provided')
         v = np.full((h, w), 0, dtype=np.uint8)
         return MyImage(v, v, v, mode)
 
     @staticmethod
-    def new_from_pixels(pixels: list[tuple], mode: str, width: int, height: int):
+    def new_from_pixels(pixels: list[RGB_PIXEL|GRAY_PIXEL], mode: Literal["RGB","L"], width: int, height: int):
         if len(pixels) == 0:
             raise ValueError("no pixels were given")
         img = MyImage.new(width, height, mode)
         for item in pixels:
             x, y, *v = item
-            img[x, y] = v
+            img[x, y] = v # type: ignore
         return img
 
     @staticmethod
@@ -1388,7 +1452,9 @@ class MyImage:
         R, G, B = [], [], []
 
         for r, g, b in img.getdata():
-            R.append(r), G.append(g), B.append(b)
+            R.append(r) 
+            G.append(g)
+            B.append(b)
 
         R = np.array(R).reshape((img.height, img.width))
         G = np.array(G).reshape((img.height, img.width))
@@ -1397,13 +1463,12 @@ class MyImage:
         return MyImage(R, G, B, 'RGB')
 
     def save_image(self, path: str):
-        self: MyImage = self
         img_to_save = Image.new(self.mode, self.dimensions)
 
         if self.mode == 'L':
             for x in range(self.width):
                 for y in range(self.height):
-                    v = int(sum(self[x, y]) // 3)
+                    v = self[x,y]
                     img_to_save.putpixel((x, y), v)
         elif self.mode == 'RGB':
             for x in range(self.width):
@@ -1446,19 +1511,15 @@ class MyImage:
                     (y, x))
 
                 pil_img = Image.new("RGB", img.dimensions)
-                pil_img.putdata(list(zip(img.r.flatten(), img.g.flatten(), img.b.flatten())))
+                pil_img.putdata(list(zip(img.r.flatten(), img.g.flatten(), img.b.flatten()))) # type:ignore
                 axe.imshow(pil_img)
         plt.show()
 
     @staticmethod
-    def show_histograms(images: list, _type: str):
-        """
-        _type must be one of these variants h,nh,ch,cnh
-        """
+    def show_histograms(images: list, _type: Literal["h","nh","ch","cnh"]):
         HISTO_TYPES = "h", 'nh', "ch", "cnh"
-        _type = _type.lower().strip()
-        if _type not in HISTO_TYPES:
-            raise ValueError(f"type of histogram {_type} is not supported please choose from {HISTO_TYPES}")
+        _type = _type.lower().strip() # type:ignore
+        if _type not in HISTO_TYPES: raise ValueError(f"type of histogram {_type} is not supported please choose from {HISTO_TYPES}")
 
         def get_histo(img: MyImage, _type: str):
             match _type:
@@ -1480,7 +1541,6 @@ class MyImage:
             "cnh": "C/N HISTOGRAM"
         }
 
-        images: list[MyImage] = images
         NUMBER_OF_ROWS = len(images)
         IMAGES_PER_ROW = 3
 
@@ -1518,3 +1578,4 @@ class MyImage:
                 raise Exception(f"{img.mode} is unsupported")
 
         plt.show()
+
