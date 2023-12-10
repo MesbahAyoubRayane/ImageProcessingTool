@@ -178,7 +178,7 @@ class Application(Window):
         menues["Filters"].add_command(label='Min', command=self.filters_min_menu_bare_command)  # 1 -> 1
         menues["Filters"].add_separator()
         menues["Filters"].add_command(label='Gaussian', command=self.filters_gaussian_menu_bare_command)  # 1 -> 1
-        menues["Filters"].add_command(label='Bilateral', command=self.filters_bilateral_menu_bare_command)  # 1 -> 1
+        #menues["Filters"].add_command(label='Bilateral', command=self.filters_bilateral_menu_bare_command)  # 1 -> 1
         menues["Filters"].add_command(label='Laplacian', command=self.filters_lablacian_menu_bare_command)  # 1 -> 1
 
         menues["Histogram based operations"].add_command(label='Translation',
@@ -235,13 +235,13 @@ class Application(Window):
         self.operation_stack_tree_view.bind("<Double-3>", dblclk_show_meta)
 
     def __create_buttons__(self):
-        self.dlt_btn = ttk.Button(self, text="Discard", command=self.btn_dlt_command, bootstyle=ttkbootstrap.DANGER)
-        self.clr_btn = ttk.Button(self, text="Clear", command=self.btn_clr_command, bootstyle=ttkbootstrap.DANGER)
-        self.cpy_btn = ttk.Button(self, text="Copy", command=self.btn_cpy_command, bootstyle=ttkbootstrap.PRIMARY)
+        self.dlt_btn = ttk.Button(self, text="Discard", command=self.btn_dlt_command, bootstyle=ttkbootstrap.DANGER)  # type: ignore
+        self.clr_btn = ttk.Button(self, text="Clear", command=self.btn_clr_command, bootstyle=ttkbootstrap.DANGER) # type: ignore
+        self.cpy_btn = ttk.Button(self, text="Copy", command=self.btn_cpy_command, bootstyle=ttkbootstrap.PRIMARY) # type: ignore
         self.extract_btn = ttk.Button(self, text="Extract", command=self.btn_extract_command,
-                                      bootstyle=ttkbootstrap.PRIMARY)
+                                      bootstyle=ttkbootstrap.PRIMARY) # type: ignore
         self.rename_btn = ttk.Button(self, text="Rename", command=self.btn_rename_command,
-                                     bootstyle=ttkbootstrap.SUCCESS)
+                                     bootstyle=ttkbootstrap.SUCCESS) # type: ignore
 
         self.rename_btn.pack(fill=tk.BOTH, padx=5, pady=3)
         self.cpy_btn.pack(fill=tk.BOTH, padx=5, pady=3)
@@ -323,14 +323,22 @@ class Application(Window):
         if input_imgs is None:
             return
 
-        x = simpledialog.askinteger("TRANSLATION", "ENTER NUMBER OF PIXELS FOR TRANSLATION OF THE X AXES")
+        x = simpledialog.askinteger("TRANSLATION", "ENTER NUMBER OF PIXELS TO SHIFT THE X AXES")
         if x is None:
             messagebox.showerror("ERROR", "OPERATION WAS CANCELED")
             return
 
-        y = simpledialog.askinteger("TRANSLATION", "ENTER NUMBER OF PXLS FOR TRANSLATION OF THE Y AXES")
+        if x > Application.MAX_IMG_WIDTH:
+            messagebox.showerror("ERROR",f"MAX WIDTH TRANSLATION IS {Application.MAX_IMG_WIDTH}")
+            return
+
+        y = simpledialog.askinteger("TRANSLATION", "ENTER NUMBER OF PIXELS TO SHIFT THE Y AXES")
         if y is None:
             messagebox.showerror("ERROR", "OPERATION WAS CANCELED")
+            return
+        
+        if y > Application.MAX_IMG_HEIGHT:
+            messagebox.showerror("ERROR",f"MAX HEIGHT TRANSLATION IS {Application.MAX_IMG_HEIGHT}")
             return
 
         self.operation_stack.append(StackFrame(input_imgs, ift.MyImage.translation, (x, y,), 'o'))
@@ -352,7 +360,7 @@ class Application(Window):
         if input_imgs is None:
             return
 
-        direction = simpledialog.askstring("USER INPUT", 'SELECT THE AXES OF REFLECTION\n- H(HORIZONTAL)\n-V(VERTICAL)')
+        direction = simpledialog.askstring("USER INPUT", 'SELECT THE AXES OF REFLECTION\n-H (HORIZONTAL)\n-V (VERTICAL)')
         if direction is None:
             return
         direction = direction.lower().strip()
@@ -955,6 +963,9 @@ class Application(Window):
 
     def btn_extract_command(self):
         imgs = self.get_selected_images()
+        if len(self.get_selected_images_by_index()) == 1 and len(imgs) == 1:
+            messagebox.showerror("ERROR","CAN'T EXTRACTE ONE IMAGE")
+            return
         if len(imgs) <= 0:
             messagebox.showerror("ERROR", "ERROR NO IMAGE WAS SELECTED")
             return
