@@ -6,7 +6,7 @@ from typing import Generator, Literal, Optional, Self
 import numpy as np
 import numpy.typing as npty
 from PIL import Image
-from matplotlib import pyplot as plt
+from matplotlib import axis, pyplot as plt
 
 
 
@@ -420,15 +420,14 @@ class MyImage: #
 
     def histo_equalisation(self) -> Self:
         """ use the cumulative histograme to improve contraste"""
+        cp_img = self.copy()
         if self.mode == "RGB":
             cdf_r, cdf_g, cdf_b = self.cumulative_normalized_histo()
-            cp_img = self.copy()
             for x, y, r, g, b in self.pixels(): # type: ignore
-                cp_img[x, y] = (int(cdf_r[r] * 255), int(cdf_g[g] * 255), int(cdf_b[b] * 255))
+                cp_img[x, y] = (int(cdf_r[int(r)] * 255), int(cdf_g[int(g)] * 255), int(cdf_b[int(b)] * 255))
         
         elif self.mode == 'L':
-            cdf: npty.NDArray[np.int32] = self.cumulative_normalized_histo() # type: ignore 
-            cp_img = self.copy()
+            cdf: npty.NDArray[np.int32] = self.cumulative_normalized_histo() # type: ignore
             for x, y, v in cp_img.pixels(): # type: ignore
                 cp_img[x, y] = int(255 * cdf[int(v)])
         else:
@@ -500,7 +499,6 @@ class MyImage: #
         copy_img.b = np.clip((b_bag * kernel).sum(axis=(1, 2)), 0, 255).astype(np.uint8).reshape(self.r.shape)
         return copy_img
 
-    # TODO this function can be improved using two convolution the first on the x axis and the second on the y axes
     def gaussian_filter(self, size: int, std: float) -> Self:
         if isinstance(size, int):
             if size < 2:
@@ -516,7 +514,7 @@ class MyImage: #
         x, y = np.meshgrid(np.arange(size), np.arange(size))
         kernel = np.exp(-((x - size // 2) ** 2 + (y - size // 2) ** 2) / (2 * std ** 2))
         kernel /= (2 * np.pi * std ** 2)
-        kernel /= kernel.sum()
+        kernel /= kernel.sum() if kernel.sum() != 0 else 1
         # Normalize the kernel
         # kernel /= kernel.sum() this is not necessary
         # Pad the input image using NumPy
@@ -601,6 +599,7 @@ class MyImage: #
         X, Y = np.meshgrid(np.arange(size), np.arange(size))
         s_kernel = (np.exp(-0.5 * ((X - size // 2) ** 2 + (Y - size // 2) ** 2) / std_s ** 2) / (
                 2 * np.pi * std_s ** 2)).reshape((1, size, size))
+        s_kernel /= s_kernel.sum() if s_kernel.sum() != 0 else 1
         cpy_img = MyImage.new(self.width, self.height, self.mode)
 
         if self.mode == "RGB":
@@ -664,11 +663,11 @@ class MyImage: #
 
             # compute the new values of the pixels
             tmp = s_kernel * b_r_kernel
-            new_r = (all_r_patchs * tmp).sum(axis=(1, 2)) / tmp.sum(axis=(1, 2))
+            new_r = (all_r_patchs * tmp).sum(axis=(1, 2)) / (tmp.sum(axis=(1, 2)) if (tmp.sum(axis=(1,2)) != 0).all() else 1)
             tmp = s_kernel * b_g_kernel
-            new_g = (all_g_patchs * tmp).sum(axis=(1, 2)) / tmp.sum(axis=(1, 2))
+            new_g = (all_g_patchs * tmp).sum(axis=(1, 2)) / (tmp.sum(axis=(1, 2)) if (tmp.sum(axis=(1,2)) != 0).all() else 1)
             tmp = s_kernel * b_b_kernel
-            new_b = (all_b_patchs * tmp).sum(axis=(1, 2)) / tmp.sum(axis=(1, 2))
+            new_b = (all_b_patchs * tmp).sum(axis=(1, 2)) / (tmp.sum(axis=(1, 2)) if (tmp.sum(axis=(1,2)) != 0).all() else 1)
 
             cpy_img.r = np.clip(new_r, 0, 255).astype(np.uint8).reshape(self.r.shape)
             cpy_img.g = np.clip(new_g, 0, 255).astype(np.uint8).reshape(self.r.shape)
@@ -693,7 +692,7 @@ class MyImage: #
                 ]
             )
             tmp = s_kernel * b_r_kernel
-            new_r = (all_r_patchs * tmp).sum(axis=(1, 2)) / tmp.sum(axis=(1, 2))
+            new_r = (all_r_patchs * tmp).sum(axis=(1, 2)) / (tmp.sum(axis=(1, 2)) if (tmp.sum(axis=(1, 2)) != 0).all() else 1)
             cpy_img.b = cpy_img.g = cpy_img.r = np.clip(new_r, 0, 255).astype(np.uint8).reshape(self.r.shape)
             return cpy_img
         else:
